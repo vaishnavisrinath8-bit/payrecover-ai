@@ -1,0 +1,29 @@
+{
+  "name": "payrecover-ai-backend",
+  "version": "1.0.0",
+  "description": "AI-powered payment recovery backend for PayRecover AI",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "keywords": [
+    "payment-recovery",
+    "ai",
+    "razorpay",
+    "buildathon"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^4.22.2",
+    "mongoose": "^8.5.1",
+    "nodemailer": "^9.0.5",
+    "razorpay": "^2.9.8"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  }
+}

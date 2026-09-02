@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+
+import React, { useEffect, useState } from "react";
 import {
   NavLink,
   Outlet,
@@ -9,523 +10,637 @@ import {
 import {
   LayoutDashboard,
   CreditCard,
-  RefreshCcw,
+  RotateCcw,
   BarChart3,
-  Settings,
+  Bell,
   UserCircle,
+  Settings,
+  Search,
   Menu,
   X,
-  LogOut,
   ChevronDown,
-  Bell,
+  LogOut,
+  CircleHelp,
+  Sparkles,
   ShieldCheck,
-  WalletCards,
+  Activity,
+  Command,
 } from "lucide-react";
 
-const navigationGroups = [
-  {
-    title: "Overview",
-    items: [
-      {
-        label: "Dashboard",
-        path: "/dashboard",
-        icon: LayoutDashboard,
-      },
-    ],
-  },
+import {
+  searchPayments,
+  searchRecoveries,
+} from "../services/api";
 
-  {
-    title: "Payments",
-    items: [
-      {
-        label: "Payments",
-        path: "/payments",
-        icon: CreditCard,
-      },
-      {
-        label: "Recoveries",
-        path: "/recoveries",
-        icon: RefreshCcw,
-      },
-    ],
-  },
-
-  {
-    title: "Insights",
-    items: [
-      {
-        label: "Analytics",
-        path: "/analytics",
-        icon: BarChart3,
-      },
-      {
-        label: "Notifications",
-        path: "/notifications",
-        icon: Bell,
-      },
-    ],
-  },
-
-  {
-    title: "System",
-    items: [
-      {
-        label: "Account",
-        path: "/account",
-        icon: UserCircle,
-      },
-      {
-        label: "Settings",
-        path: "/settings",
-        icon: Settings,
-      },
-    ],
-  },
-];
-
-function getInitials(name) {
-  if (!name) return "PR";
-
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part.charAt(0).toUpperCase())
-    .join("");
-}
-
-function getPageName(pathname) {
-  if (
-    pathname === "/" ||
-    pathname === "/dashboard"
-  ) {
-    return "Dashboard";
-  }
-
-  const names = {
-    "/payments": "Payments",
-    "/recoveries": "Recoveries",
-    "/analytics": "Analytics",
-    "/notifications": "Notifications",
-    "/account": "Account",
-    "/settings": "Settings",
-  };
-
-  return names[pathname] || "Dashboard";
-}
-
-export default function Layout() {
-  const navigate = useNavigate();
+function Layout() {
   const location = useLocation();
+  const navigate = useNavigate();
 
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
 
-  const userName =
-    localStorage.getItem("payrecover_user_name") ||
-    "PayRecover Admin";
+  const primaryNavigation = [
+    {
+      label: "Overview",
+      path: "/dashboard",
+      icon: LayoutDashboard,
+      description: "Business overview",
+    },
+    {
+      label: "Payments",
+      path: "/payments",
+      icon: CreditCard,
+      description: "Payment activity",
+    },
+    {
+      label: "Recoveries",
+      path: "/recoveries",
+      icon: RotateCcw,
+      description: "Revenue recovery",
+    },
+    {
+      label: "Analytics",
+      path: "/analytics",
+      icon: BarChart3,
+      description: "Performance insights",
+    },
+  ];
 
-  const userEmail =
-    localStorage.getItem("payrecover_user_email") ||
-    "admin@payrecover.ai";
+  const secondaryNavigation = [
+    {
+      label: "Notifications",
+      path: "/notifications",
+      icon: Bell,
+    },
+    {
+      label: "Account",
+      path: "/account",
+      icon: UserCircle,
+    },
+    {
+      label: "Settings",
+      path: "/settings",
+      icon: Settings,
+    },
+  ];
 
-  const initials = getInitials(userName);
-
-  const currentPage = getPageName(location.pathname);
-
-  const handleLogout = () => {
-    localStorage.removeItem("payrecover_session");
-
-    setProfileOpen(false);
-    setMobileOpen(false);
-
-    navigate("/dashboard");
-  };
-
-  const handleNavigation = (path) => {
-    setMobileOpen(false);
-    setProfileOpen(false);
-    navigate(path);
-  };
-
-  const isActivePath = (path) => {
-    if (path === "/dashboard") {
-      return (
-        location.pathname === "/" ||
-        location.pathname === "/dashboard"
-      );
+  const getPageTitle = () => {
+    if (location.pathname.startsWith("/payments/")) {
+      return "Payment Details";
     }
 
-    return location.pathname.startsWith(path);
+    const allItems = [
+      ...primaryNavigation,
+      ...secondaryNavigation,
+    ];
+
+    const current = allItems.find(
+      (item) =>
+        location.pathname === item.path ||
+        location.pathname.startsWith(`${item.path}/`)
+    );
+
+    return current?.label || "Overview";
+  };
+
+  useEffect(() => {
+    const value = searchValue.trim();
+
+    if (!value) {
+      setSearchResults([]);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        setSearching(true);
+
+        const [paymentsResult, recoveriesResult] =
+          await Promise.allSettled([
+            searchPayments(value),
+            searchRecoveries(value),
+          ]);
+
+        const results = [];
+
+        if (paymentsResult.status === "fulfilled") {
+          const data = Array.isArray(paymentsResult.value)
+            ? paymentsResult.value
+            : paymentsResult.value?.data || [];
+
+          data.slice(0, 5).forEach((payment) => {
+            results.push({
+              type: "Payment",
+              title:
+                payment.customerName ||
+                payment.razorpayPaymentId ||
+                "Payment",
+              subtitle:
+                payment.razorpayPaymentId ||
+                payment.customerEmail ||
+                "",
+              path: payment._id
+                ? `/payments/${payment._id}`
+                : "/payments",
+            });
+          });
+        }
+
+        if (recoveriesResult.status === "fulfilled") {
+          const data = Array.isArray(recoveriesResult.value)
+            ? recoveriesResult.value
+            : recoveriesResult.value?.data || [];
+
+          data.slice(0, 5).forEach((recovery) => {
+            results.push({
+              type: "Recovery",
+              title:
+                recovery.customerName ||
+                "Recovery case",
+              subtitle:
+                recovery.customerEmail ||
+                recovery.failureReason ||
+                "",
+              path: "/recoveries",
+            });
+          });
+        }
+
+        setSearchResults(results.slice(0, 8));
+      } catch (error) {
+        console.error("Global search error:", error);
+        setSearchResults([]);
+      } finally {
+        setSearching(false);
+      }
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [searchValue]);
+
+  const handleNavigation = (path) => {
+    navigate(path);
+    setSidebarOpen(false);
+  };
+
+  const handleSearchResult = (result) => {
+    setSearchValue("");
+    setSearchResults([]);
+    setSearchOpen(false);
+    navigate(result.path);
   };
 
   return (
     <div className="app-shell">
-
-      {/* MOBILE OVERLAY */}
-
-      {mobileOpen && (
-        <button
-          type="button"
+      {/* =====================================================
+          MOBILE OVERLAY
+      ====================================================== */}
+      {sidebarOpen && (
+        <div
           className="sidebar-overlay"
-          aria-label="Close navigation"
-          onClick={() => setMobileOpen(false)}
+          onClick={() => setSidebarOpen(false)}
         />
       )}
 
-      {/* SIDEBAR */}
-
+      {/* =====================================================
+          SIDEBAR
+      ====================================================== */}
       <aside
-        className={`sidebar ${
-          mobileOpen ? "sidebar-open" : ""
+        className={`app-sidebar ${
+          sidebarOpen ? "sidebar-mobile-open" : ""
         }`}
       >
-
         {/* BRAND */}
-
         <div className="sidebar-brand">
-
           <div className="brand-mark">
-            <WalletCards
-              size={22}
-              strokeWidth={2.4}
-            />
+            <div className="brand-mark-inner">
+              PR
+            </div>
           </div>
 
           <div className="brand-copy">
             <div className="brand-name">
-              PayRecover AI
+              PayRecover
             </div>
 
             <div className="brand-subtitle">
-              Payment Recovery Platform
+              AI Revenue Recovery
             </div>
           </div>
 
           <button
             type="button"
-            className="mobile-close-button"
+            className="mobile-close-btn"
+            onClick={() => setSidebarOpen(false)}
             aria-label="Close navigation"
-            onClick={() =>
-              setMobileOpen(false)
-            }
           >
             <X size={20} />
           </button>
-
         </div>
 
-        {/* NAVIGATION */}
+        {/* WORKSPACE BADGE */}
+        <div className="workspace-selector">
+          <div className="workspace-avatar">
+            P
+          </div>
 
+          <div className="workspace-info">
+            <span className="workspace-label">
+              Workspace
+            </span>
+
+            <strong>
+              PayRecover Demo
+            </strong>
+          </div>
+
+          <ChevronDown size={15} />
+        </div>
+
+        {/* PRIMARY NAVIGATION */}
         <div className="sidebar-content">
+          <div className="sidebar-section">
+            <div className="sidebar-section-heading">
+              <span>WORKSPACE</span>
+            </div>
 
-          {navigationGroups.map((group) => (
-            <div
-              className="nav-group"
-              key={group.title}
-            >
+            <nav className="sidebar-nav">
+              {primaryNavigation.map((item) => {
+                const Icon = item.icon;
 
-              <div className="nav-group-title">
-                {group.title}
-              </div>
-
-              <nav className="nav-list">
-
-                {group.items.map((item) => {
-                  const Icon = item.icon;
-
-                  const active =
-                    isActivePath(item.path);
-
-                  return (
-                    <NavLink
-                      key={item.path}
-                      to={item.path}
-                      className={`nav-item ${
-                        active ? "active" : ""
-                      }`}
-                      onClick={() => {
-                        setMobileOpen(false);
-                        setProfileOpen(false);
-                      }}
-                    >
-
+                return (
+                  <NavLink
+                    key={item.path}
+                    to={item.path}
+                    onClick={() =>
+                      setSidebarOpen(false)
+                    }
+                    className={({ isActive }) =>
+                      `sidebar-link ${
+                        isActive ? "active" : ""
+                      }`
+                    }
+                  >
+                    <span className="sidebar-link-icon">
                       <Icon
                         size={18}
                         strokeWidth={2}
                       />
+                    </span>
 
-                      <span>
+                    <span className="sidebar-link-content">
+                      <span className="sidebar-link-label">
                         {item.label}
                       </span>
 
-                      {item.label ===
-                        "Notifications" && (
-                        <span className="nav-notification-dot" />
-                      )}
+                      <span className="sidebar-link-description">
+                        {item.description}
+                      </span>
+                    </span>
+                  </NavLink>
+                );
+              })}
+            </nav>
+          </div>
 
-                    </NavLink>
-                  );
-                })}
-
-              </nav>
-
+          {/* MANAGEMENT */}
+          <div className="sidebar-section sidebar-management">
+            <div className="sidebar-section-heading">
+              <span>MANAGEMENT</span>
             </div>
-          ))}
 
+            <nav className="sidebar-nav">
+              {secondaryNavigation.map((item) => {
+                const Icon = item.icon;
+
+                return (
+                  <NavLink
+                    key={item.path}
+                    to={item.path}
+                    onClick={() =>
+                      setSidebarOpen(false)
+                    }
+                    className={({ isActive }) =>
+                      `sidebar-link compact ${
+                        isActive ? "active" : ""
+                      }`
+                    }
+                  >
+                    <span className="sidebar-link-icon">
+                      <Icon
+                        size={18}
+                        strokeWidth={2}
+                      />
+                    </span>
+
+                    <span className="sidebar-link-content">
+                      <span className="sidebar-link-label">
+                        {item.label}
+                      </span>
+                    </span>
+                  </NavLink>
+                );
+              })}
+            </nav>
+          </div>
         </div>
 
-        {/* SIDEBAR FOOTER */}
+        {/* AI STATUS CARD */}
+        <div className="ai-status-card">
+          <div className="ai-status-top">
+            <div className="ai-status-icon">
+              <Sparkles size={16} />
+            </div>
 
-        <div className="sidebar-footer">
+            <div className="ai-status-title">
+              AI Recovery Engine
+            </div>
 
-          <div className="security-card">
+            <span className="ai-live-dot" />
+          </div>
 
-            <div className="security-icon">
-              <ShieldCheck size={17} />
+          <div className="ai-status-message">
+            Automated recovery workflows are
+            operational.
+          </div>
+
+          <div className="ai-status-metrics">
+            <div>
+              <Activity size={13} />
+              <span>Operational</span>
             </div>
 
             <div>
-              <strong>
-                Platform protected
-              </strong>
-
-              <span>
-                Secure payment operations
-              </span>
+              <ShieldCheck size={13} />
+              <span>Protected</span>
             </div>
-
           </div>
-
-          <div className="sidebar-profile">
-
-            <div className="profile-avatar">
-              {initials}
-            </div>
-
-            <div className="profile-info">
-
-              <strong>
-                {userName}
-              </strong>
-
-              <span>
-                {userEmail}
-              </span>
-
-            </div>
-
-            <button
-              type="button"
-              className="profile-more"
-              aria-label="Open profile menu"
-              onClick={() =>
-                setProfileOpen(
-                  (current) => !current
-                )
-              }
-            >
-              <ChevronDown size={17} />
-            </button>
-
-          </div>
-
         </div>
 
+        {/* SIDEBAR FOOTER */}
+        <div className="sidebar-footer">
+          <div className="sidebar-footer-icon">
+            <CircleHelp size={17} />
+          </div>
+
+          <div className="sidebar-footer-content">
+            <strong>Need help?</strong>
+            <span>View documentation</span>
+          </div>
+
+          <ChevronDown
+            size={14}
+            className="sidebar-footer-chevron"
+          />
+        </div>
       </aside>
 
-      {/* MAIN */}
-
-      <div className="main-shell">
-
-        {/* TOPBAR */}
-
-        <header className="topbar">
-
-          <div className="topbar-left">
-
+      {/* =====================================================
+          MAIN APPLICATION
+      ====================================================== */}
+      <main className="app-main">
+        {/* TOP HEADER */}
+        <header className="app-header">
+          <div className="header-left">
             <button
               type="button"
-              className="mobile-menu-button"
+              className="mobile-menu-btn"
+              onClick={() => setSidebarOpen(true)}
               aria-label="Open navigation"
-              onClick={() =>
-                setMobileOpen(true)
-              }
             >
               <Menu size={21} />
             </button>
 
-            <div className="breadcrumb">
-
-              <span>
-                PayRecover AI
+            <div className="header-breadcrumb">
+              <span className="breadcrumb-muted">
+                PayRecover
               </span>
 
-              <span className="breadcrumb-separator">
+              <span className="breadcrumb-divider">
                 /
               </span>
 
               <strong>
-                {currentPage}
+                {getPageTitle()}
               </strong>
-
             </div>
-
           </div>
 
-          {/* TOPBAR ACTIONS */}
-
-          <div className="topbar-actions">
-
-            {/* NOTIFICATIONS */}
-
-            <button
-              type="button"
-              className="icon-button notification-button"
-              aria-label="Open notifications"
-              onClick={() =>
-                handleNavigation(
-                  "/notifications"
-                )
-              }
-            >
-
-              <Bell size={19} />
-
-              <span className="notification-dot" />
-
-            </button>
-
-            {/* PROFILE */}
-
-            <div className="profile-menu-wrapper">
-
+          <div className="header-actions">
+            {/* GLOBAL SEARCH */}
+            <div className="global-search-wrapper">
               <button
                 type="button"
-                className="topbar-profile"
+                className={`header-icon-btn ${
+                  searchOpen ? "active" : ""
+                }`}
                 onClick={() =>
-                  setProfileOpen(
-                    (current) => !current
-                  )
+                  setSearchOpen((value) => !value)
                 }
+                aria-label="Search"
               >
-
-                <div className="profile-avatar small">
-                  {initials}
-                </div>
-
-                <div className="topbar-profile-text">
-
-                  <strong>
-                    {userName}
-                  </strong>
-
-                  <span>
-                    Administrator
-                  </span>
-
-                </div>
-
-                <ChevronDown size={16} />
-
+                <Search size={18} />
               </button>
 
-              {/* PROFILE DROPDOWN */}
+              {searchOpen && (
+                <div className="global-search-panel">
+                  <div className="search-panel-header">
+                    <div className="search-input-wrapper">
+                      <Search size={17} />
+
+                      <input
+                        autoFocus
+                        type="text"
+                        placeholder="Search payments, customers..."
+                        value={searchValue}
+                        onChange={(event) =>
+                          setSearchValue(
+                            event.target.value
+                          )
+                        }
+                      />
+
+                      <span className="search-shortcut">
+                        <Command size={11} />
+                        K
+                      </span>
+                    </div>
+                  </div>
+
+                  {searchValue && (
+                    <div className="search-results">
+                      {searching ? (
+                        <div className="search-state">
+                          Searching...
+                        </div>
+                      ) : searchResults.length > 0 ? (
+                        searchResults.map(
+                          (result, index) => (
+                            <button
+                              type="button"
+                              key={`${result.type}-${index}`}
+                              className="search-result"
+                              onClick={() =>
+                                handleSearchResult(
+                                  result
+                                )
+                              }
+                            >
+                              <div className="search-result-icon">
+                                {result.type ===
+                                "Payment" ? (
+                                  <CreditCard
+                                    size={16}
+                                  />
+                                ) : (
+                                  <RotateCcw
+                                    size={16}
+                                  />
+                                )}
+                              </div>
+
+                              <div className="search-result-content">
+                                <strong>
+                                  {result.title}
+                                </strong>
+
+                                <span>
+                                  {result.subtitle}
+                                </span>
+                              </div>
+
+                              <span className="search-result-type">
+                                {result.type}
+                              </span>
+                            </button>
+                          )
+                        )
+                      ) : (
+                        <div className="search-state">
+                          No matching records found.
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* NOTIFICATIONS */}
+            <button
+              type="button"
+              className="header-icon-btn notification-button"
+              onClick={() =>
+                navigate("/notifications")
+              }
+              aria-label="Notifications"
+            >
+              <Bell size={18} />
+              <span className="notification-dot" />
+            </button>
+
+            <div className="header-divider" />
+
+            {/* PROFILE */}
+            <div className="profile-wrapper">
+              <button
+                type="button"
+                className="profile-button"
+                onClick={() =>
+                  setProfileOpen((value) => !value)
+                }
+              >
+                <div className="profile-avatar">
+                  A
+                </div>
+
+                <div className="profile-info">
+                  <strong>Admin</strong>
+                  <span>Administrator</span>
+                </div>
+
+                <ChevronDown
+                  size={15}
+                  className={
+                    profileOpen
+                      ? "profile-chevron-open"
+                      : ""
+                  }
+                />
+              </button>
 
               {profileOpen && (
-                <div className="profile-dropdown">
-
-                  <div className="dropdown-header">
-
-                    <div className="profile-avatar">
-                      {initials}
+                <div className="profile-menu">
+                  <div className="profile-menu-header">
+                    <div className="profile-menu-avatar">
+                      A
                     </div>
 
                     <div>
-
                       <strong>
-                        {userName}
+                        Admin
                       </strong>
 
                       <span>
-                        {userEmail}
+                        admin@payrecover.ai
                       </span>
-
                     </div>
-
                   </div>
 
-                  <div className="dropdown-divider" />
+                  <div className="profile-menu-divider" />
 
                   <button
                     type="button"
-                    className="dropdown-item"
-                    onClick={() =>
-                      handleNavigation(
-                        "/account"
-                      )
-                    }
+                    onClick={() => {
+                      setProfileOpen(false);
+                      navigate("/account");
+                    }}
                   >
-
                     <UserCircle size={17} />
-
-                    <span>
-                      Account
-                    </span>
-
+                    Account
                   </button>
 
                   <button
                     type="button"
-                    className="dropdown-item"
+                    onClick={() => {
+                      setProfileOpen(false);
+                      navigate("/settings");
+                    }}
+                  >
+                    <Settings size={17} />
+                    Settings
+                  </button>
+
+                  <div className="profile-menu-divider" />
+
+                  <button
+                    type="button"
+                    className="logout-option"
                     onClick={() =>
-                      handleNavigation(
-                        "/settings"
-                      )
+                      setProfileOpen(false)
                     }
                   >
-
-                    <Settings size={17} />
-
-                    <span>
-                      Settings
-                    </span>
-
-                  </button>
-
-                  <div className="dropdown-divider" />
-
-                  <button
-                    type="button"
-                    className="dropdown-item danger"
-                    onClick={handleLogout}
-                  >
-
                     <LogOut size={17} />
-
-                    <span>
-                      Logout
-                    </span>
-
+                    Sign out
                   </button>
-
                 </div>
               )}
-
             </div>
-
           </div>
-
         </header>
 
-        {/* PAGE CONTENT */}
-
-        <main className="page-content">
+        {/* CONTENT */}
+        <section className="app-content">
           <Outlet />
-        </main>
-
-      </div>
-
+        </section>
+      </main>
     </div>
   );
 }
+
+export default Layout;
+

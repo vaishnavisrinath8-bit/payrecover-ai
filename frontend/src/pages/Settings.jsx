@@ -1,384 +1,742 @@
 import React, { useEffect, useState } from "react";
 import {
   Bell,
-  Check,
-  Globe,
-  Lock,
+  CheckCircle2,
+  Clock3,
+  Mail,
   RotateCcw,
   Save,
   ShieldCheck,
+  Sparkles,
+  SlidersHorizontal,
+  Zap,
 } from "lucide-react";
 
-import { Toast } from "../components/UI";
+import "./Settings.css";
 
 const DEFAULT_SETTINGS = {
-  businessName: "PayRecover AI",
-  currency: "INR",
-  timezone: "Asia/Kolkata",
+  automationEnabled: true,
+  autoCreateRecovery: true,
+  autoSendRecovery: false,
+  aiRecommendations: true,
 
-  paymentFailureNotifications: true,
-  recoveryNotifications: true,
-  emailNotifications: true,
+  maxAttempts: 3,
+  retryWindow: 72,
+  recoveryExpiry: 7,
 
-  enableRecoveryWorkflow: true,
-  automaticRecoveryEmails: false,
-  retryPreferences: "standard",
+  emailEnabled: true,
+  recoveryAlerts: true,
+  criticalAlerts: true,
+  dailySummary: true,
 
-  sessionSecurity: true,
+  complianceEnabled: true,
+  respectContactRules: true,
+  stopAfterLimit: true,
+  requireApproval: false,
+
+  preferredChannel: "email",
+  messageLanguage: "English",
 };
 
-export default function Settings() {
-  const [settings, setSettings] =
-    useState(DEFAULT_SETTINGS);
+function loadSettings() {
+  try {
+    const stored = localStorage.getItem("payrecover_settings");
 
-  const [toast, setToast] = useState(null);
+    if (stored) {
+      return {
+        ...DEFAULT_SETTINGS,
+        ...JSON.parse(stored),
+      };
+    }
+  } catch (error) {
+    console.error("Unable to load settings:", error);
+  }
+
+  return { ...DEFAULT_SETTINGS };
+}
+
+export default function Settings() {
+  const [settings, setSettings] = useState(loadSettings);
+  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(
-        "payrecover_settings"
-      );
-
-      if (stored) {
-        setSettings({
-          ...DEFAULT_SETTINGS,
-          ...JSON.parse(stored),
-        });
-      }
-    } catch {
-      // Keep defaults.
-    }
+    setSettings(loadSettings());
   }, []);
 
-  useEffect(() => {
-    if (!toast) return;
-
-    const timer = setTimeout(() => {
-      setToast(null);
-    }, 3500);
-
-    return () => clearTimeout(timer);
-  }, [toast]);
-
-  const update = (key, value) => {
+  const updateSetting = (key, value) => {
     setSettings((current) => ({
       ...current,
       [key]: value,
     }));
+
+    setSaved(false);
   };
 
-  const saveSettings = () => {
-    localStorage.setItem(
-      "payrecover_settings",
-      JSON.stringify(settings)
+  const handleSave = () => {
+    try {
+      localStorage.setItem(
+        "payrecover_settings",
+        JSON.stringify(settings)
+      );
+
+      setSaved(true);
+
+      setTimeout(() => {
+        setSaved(false);
+      }, 3000);
+    } catch (error) {
+      console.error("Unable to save settings:", error);
+    }
+  };
+
+  const handleReset = () => {
+    const confirmed = window.confirm(
+      "Reset all PayRecover settings to their recommended defaults?"
     );
 
-    setToast({
-      type: "success",
-      message: "Settings saved successfully.",
-    });
-  };
+    if (!confirmed) {
+      return;
+    }
 
-  const resetSettings = () => {
-    setSettings(DEFAULT_SETTINGS);
-    localStorage.removeItem("payrecover_settings");
+    const defaults = { ...DEFAULT_SETTINGS };
 
-    setToast({
-      type: "success",
-      message: "Settings have been reset.",
-    });
+    setSettings(defaults);
+
+    localStorage.setItem(
+      "payrecover_settings",
+      JSON.stringify(defaults)
+    );
+
+    setSaved(true);
+
+    setTimeout(() => {
+      setSaved(false);
+    }, 3000);
   };
 
   return (
-    <>
-      <div className="page-header">
+    <div className="settings-page">
+
+      {/* HEADER */}
+      <div className="settings-header">
+
         <div>
-          <span className="eyebrow">Configuration</span>
+          <div className="settings-eyebrow">
+            <SlidersHorizontal size={15} />
+            WORKSPACE CONFIGURATION
+          </div>
+
           <h1>Settings</h1>
+
           <p>
-            Configure workspace preferences and recovery
-            behavior.
+            Configure how PayRecover AI monitors payments,
+            executes recovery workflows and communicates with
+            customers.
           </p>
         </div>
 
-        <div className="header-buttons">
+        <div className="settings-actions">
+
+          {saved && (
+            <div className="settings-saved">
+              <CheckCircle2 size={16} />
+              Settings saved
+            </div>
+          )}
+
           <button
-            className="btn secondary"
-            onClick={resetSettings}
+            className="settings-reset-button"
+            onClick={handleReset}
           >
-            <RotateCcw size={17} />
+            <RotateCcw size={16} />
             Reset
           </button>
 
           <button
-            className="btn primary"
-            onClick={saveSettings}
+            className="settings-save-button"
+            onClick={handleSave}
           >
-            <Save size={17} />
-            Save Changes
+            <Save size={16} />
+            Save changes
           </button>
+
         </div>
+
+      </div>
+
+      {/* STATUS BANNER */}
+      <div className="settings-status-banner">
+
+        <div className="settings-status-icon">
+          <Zap size={19} />
+        </div>
+
+        <div>
+          <strong>
+            Recovery intelligence is active
+          </strong>
+
+          <span>
+            PayRecover is monitoring payment failures and
+            applying your configured recovery policies.
+          </span>
+        </div>
+
+        <div className="settings-live-badge">
+          <span />
+          LIVE
+        </div>
+
       </div>
 
       <div className="settings-layout">
-        <section className="card settings-section">
-          <SettingsHeading
-            icon={Globe}
-            title="General"
-            description="Default workspace configuration"
-          />
 
-          <div className="settings-grid">
-            <Field
-              label="Business name"
-              value={settings.businessName}
+        <main className="settings-main">
+
+          {/* AUTOMATION */}
+          <SettingsSection
+            icon={<Zap size={19} />}
+            title="Recovery automation"
+            description="Control how PayRecover responds to payment failures."
+          >
+
+            <SettingToggle
+              title="Enable recovery automation"
+              description="Allow PayRecover to automatically create recovery workflows for eligible failed payments."
+              checked={settings.automationEnabled}
               onChange={(value) =>
-                update("businessName", value)
+                updateSetting("automationEnabled", value)
               }
             />
 
-            <div className="field">
-              <label>Default currency</label>
+            <SettingToggle
+              title="Automatically create recoveries"
+              description="Create a recovery workflow when a payment becomes eligible for recovery."
+              checked={settings.autoCreateRecovery}
+              disabled={!settings.automationEnabled}
+              onChange={(value) =>
+                updateSetting("autoCreateRecovery", value)
+              }
+            />
 
-              <select
-                value={settings.currency}
-                onChange={(event) =>
-                  update(
-                    "currency",
-                    event.target.value
+            <SettingToggle
+              title="Automatic customer communication"
+              description="Allow recovery communications to be sent without manual approval."
+              checked={settings.autoSendRecovery}
+              disabled={!settings.automationEnabled}
+              onChange={(value) =>
+                updateSetting("autoSendRecovery", value)
+              }
+            />
+
+            <SettingToggle
+              title="AI recommendations"
+              description="Use the recovery intelligence engine to recommend the next best action."
+              checked={settings.aiRecommendations}
+              onChange={(value) =>
+                updateSetting("aiRecommendations", value)
+              }
+            />
+
+          </SettingsSection>
+
+          {/* RECOVERY POLICY */}
+          <SettingsSection
+            icon={<RotateCcw size={19} />}
+            title="Recovery policy"
+            description="Define the limits and timing of recovery attempts."
+          >
+
+            <div className="settings-grid">
+
+              <SettingSelect
+                label="Maximum attempts"
+                description="Maximum recovery attempts allowed for a payment."
+                value={settings.maxAttempts}
+                onChange={(value) =>
+                  updateSetting(
+                    "maxAttempts",
+                    Number(value)
                   )
                 }
-              >
-                <option value="INR">
-                  INR — Indian Rupee
-                </option>
-                <option value="USD">
-                  USD — US Dollar
-                </option>
-                <option value="EUR">
-                  EUR — Euro
-                </option>
-                <option value="GBP">
-                  GBP — British Pound
-                </option>
-              </select>
-            </div>
+                options={[
+                  { value: 1, label: "1 attempt" },
+                  { value: 2, label: "2 attempts" },
+                  { value: 3, label: "3 attempts" },
+                  { value: 4, label: "4 attempts" },
+                  { value: 5, label: "5 attempts" },
+                ]}
+              />
 
-            <div className="field">
-              <label>Timezone</label>
-
-              <select
-                value={settings.timezone}
-                onChange={(event) =>
-                  update(
-                    "timezone",
-                    event.target.value
+              <SettingSelect
+                label="Retry window"
+                description="Time window in which recovery attempts may be executed."
+                value={settings.retryWindow}
+                onChange={(value) =>
+                  updateSetting(
+                    "retryWindow",
+                    Number(value)
                   )
                 }
-              >
-                <option value="Asia/Kolkata">
-                  Asia/Kolkata
-                </option>
-                <option value="UTC">UTC</option>
-                <option value="Asia/Singapore">
-                  Asia/Singapore
-                </option>
-                <option value="Europe/London">
-                  Europe/London
-                </option>
-              </select>
-            </div>
-          </div>
-        </section>
+                options={[
+                  { value: 24, label: "24 hours" },
+                  { value: 48, label: "48 hours" },
+                  { value: 72, label: "72 hours" },
+                  { value: 96, label: "96 hours" },
+                  { value: 120, label: "120 hours" },
+                ]}
+              />
 
-        <section className="card settings-section">
-          <SettingsHeading
-            icon={Bell}
+              <SettingSelect
+                label="Recovery expiry"
+                description="Close recovery workflows after this period."
+                value={settings.recoveryExpiry}
+                onChange={(value) =>
+                  updateSetting(
+                    "recoveryExpiry",
+                    Number(value)
+                  )
+                }
+                options={[
+                  { value: 3, label: "3 days" },
+                  { value: 5, label: "5 days" },
+                  { value: 7, label: "7 days" },
+                  { value: 14, label: "14 days" },
+                  { value: 30, label: "30 days" },
+                ]}
+              />
+
+              <SettingSelect
+                label="Preferred recovery channel"
+                description="Default channel for customer recovery communication."
+                value={settings.preferredChannel}
+                onChange={(value) =>
+                  updateSetting(
+                    "preferredChannel",
+                    value
+                  )
+                }
+                options={[
+                  { value: "email", label: "Email" },
+                  { value: "sms", label: "SMS" },
+                  { value: "payment_retry", label: "Payment retry" },
+                  { value: "manual", label: "Manual" },
+                ]}
+              />
+
+            </div>
+
+          </SettingsSection>
+
+          {/* CUSTOMER COMMUNICATION */}
+          <SettingsSection
+            icon={<Mail size={19} />}
+            title="Customer communication"
+            description="Configure recovery communication preferences."
+          >
+
+            <div className="settings-grid">
+
+              <SettingSelect
+                label="Message language"
+                description="Preferred language for AI-generated recovery messages."
+                value={settings.messageLanguage}
+                onChange={(value) =>
+                  updateSetting(
+                    "messageLanguage",
+                    value
+                  )
+                }
+                options={[
+                  {
+                    value: "English",
+                    label: "English",
+                  },
+                  {
+                    value: "Hindi",
+                    label: "Hindi",
+                  },
+                  {
+                    value: "Hinglish",
+                    label: "Hinglish",
+                  },
+                ]}
+              />
+
+            </div>
+
+            <SettingToggle
+              title="Enable recovery emails"
+              description="Allow the recovery workflow to prepare and send customer email communications."
+              checked={settings.emailEnabled}
+              onChange={(value) =>
+                updateSetting("emailEnabled", value)
+              }
+            />
+
+            <SettingToggle
+              title="Recovery alerts"
+              description="Show alerts when a recovery workflow requires attention."
+              checked={settings.recoveryAlerts}
+              onChange={(value) =>
+                updateSetting("recoveryAlerts", value)
+              }
+            />
+
+          </SettingsSection>
+
+          {/* NOTIFICATIONS */}
+          <SettingsSection
+            icon={<Bell size={19} />}
             title="Notifications"
-            description="Choose which operational events you want to monitor"
-          />
+            description="Choose which operational events should appear in your workspace."
+          >
 
-          <ToggleRow
-            title="Payment failure notifications"
-            description="Receive notifications when a payment fails."
-            checked={
-              settings.paymentFailureNotifications
-            }
-            onChange={(value) =>
-              update(
-                "paymentFailureNotifications",
-                value
-              )
-            }
-          />
+            <SettingToggle
+              title="Critical alerts"
+              description="Receive alerts for high-priority recovery failures and compliance events."
+              checked={settings.criticalAlerts}
+              onChange={(value) =>
+                updateSetting("criticalAlerts", value)
+              }
+            />
 
-          <ToggleRow
-            title="Recovery notifications"
-            description="Receive updates about recovery workflows."
-            checked={settings.recoveryNotifications}
-            onChange={(value) =>
-              update("recoveryNotifications", value)
-            }
-          />
+            <SettingToggle
+              title="Daily recovery summary"
+              description="Receive a daily overview of recovery performance and recovered revenue."
+              checked={settings.dailySummary}
+              onChange={(value) =>
+                updateSetting("dailySummary", value)
+              }
+            />
 
-          <ToggleRow
-            title="Email notifications"
-            description="Enable operational email notifications."
-            checked={settings.emailNotifications}
-            onChange={(value) =>
-              update("emailNotifications", value)
-            }
-          />
-        </section>
+          </SettingsSection>
 
-        <section className="card settings-section">
-          <SettingsHeading
-            icon={ShieldCheck}
-            title="Recovery preferences"
-            description="Configure how payment recovery should behave"
-          />
+          {/* COMPLIANCE */}
+          <SettingsSection
+            icon={<ShieldCheck size={19} />}
+            title="Compliance & safety"
+            description="Protect customers and enforce recovery guardrails."
+          >
 
-          <ToggleRow
-            title="Enable recovery workflow"
-            description="Allow failed payments to enter the recovery workflow."
-            checked={settings.enableRecoveryWorkflow}
-            onChange={(value) =>
-              update(
-                "enableRecoveryWorkflow",
-                value
-              )
-            }
-          />
-
-          <ToggleRow
-            title="Automatic recovery emails"
-            description="Enable automatic recovery email behavior when supported by the backend."
-            checked={settings.automaticRecoveryEmails}
-            onChange={(value) =>
-              update(
-                "automaticRecoveryEmails",
-                value
-              )
-            }
-          />
-
-          <div className="field settings-field">
-            <label>Retry preference</label>
-
-            <select
-              value={settings.retryPreferences}
-              onChange={(event) =>
-                update(
-                  "retryPreferences",
-                  event.target.value
+            <SettingToggle
+              title="Compliance guardrails"
+              description="Enforce configured recovery safety rules before customer contact or action execution."
+              checked={settings.complianceEnabled}
+              onChange={(value) =>
+                updateSetting(
+                  "complianceEnabled",
+                  value
                 )
               }
-            >
-              <option value="conservative">
-                Conservative
-              </option>
-              <option value="standard">Standard</option>
-              <option value="aggressive">
-                Aggressive
-              </option>
-            </select>
-          </div>
-        </section>
+            />
 
-        <section className="card settings-section">
-          <SettingsHeading
-            icon={Lock}
-            title="Security"
-            description="Frontend workspace security preferences"
-          />
+            <SettingToggle
+              title="Respect customer contact rules"
+              description="Prevent recovery communication when contact is not permitted."
+              checked={settings.respectContactRules}
+              disabled={!settings.complianceEnabled}
+              onChange={(value) =>
+                updateSetting(
+                  "respectContactRules",
+                  value
+                )
+              }
+            />
 
-          <ToggleRow
-            title="Session security"
-            description="Keep frontend session state isolated from payment API data."
-            checked={settings.sessionSecurity}
-            onChange={(value) =>
-              update("sessionSecurity", value)
-            }
-          />
+            <SettingToggle
+              title="Stop after attempt limit"
+              description="Automatically stop recovery workflows after the configured maximum attempts."
+              checked={settings.stopAfterLimit}
+              disabled={!settings.complianceEnabled}
+              onChange={(value) =>
+                updateSetting(
+                  "stopAfterLimit",
+                  value
+                )
+              }
+            />
 
-          <div className="security-note">
-            <Check size={16} />
-            <span>
-              No authentication API is assumed. Logout only
-              clears frontend session state.
-            </span>
-          </div>
-        </section>
+            <SettingToggle
+              title="Require manual approval"
+              description="Require an operator to approve recovery actions before they are executed."
+              checked={settings.requireApproval}
+              onChange={(value) =>
+                updateSetting(
+                  "requireApproval",
+                  value
+                )
+              }
+            />
+
+          </SettingsSection>
+
+        </main>
+
+        {/* SIDEBAR */}
+        <aside className="settings-sidebar">
+
+          <section className="settings-card settings-summary-card">
+
+            <div className="settings-summary-header">
+              <div className="settings-summary-icon">
+                <Sparkles size={20} />
+              </div>
+
+              <div>
+                <span>AI CONTROL CENTER</span>
+                <h2>Recovery Intelligence</h2>
+              </div>
+            </div>
+
+            <p>
+              Your current configuration controls how the AI
+              recovery engine evaluates failed payments and
+              recommends interventions.
+            </p>
+
+            <SummaryRow
+              label="Automation"
+              enabled={settings.automationEnabled}
+            />
+
+            <SummaryRow
+              label="AI recommendations"
+              enabled={settings.aiRecommendations}
+            />
+
+            <SummaryRow
+              label="Compliance"
+              enabled={settings.complianceEnabled}
+            />
+
+            <SummaryRow
+              label="Customer email"
+              enabled={settings.emailEnabled}
+            />
+
+          </section>
+
+          <section className="settings-card">
+
+            <div className="settings-side-title">
+              <Clock3 size={17} />
+              Current policy
+            </div>
+
+            <div className="policy-row">
+              <span>Max attempts</span>
+              <strong>
+                {settings.maxAttempts}
+              </strong>
+            </div>
+
+            <div className="policy-row">
+              <span>Retry window</span>
+              <strong>
+                {settings.retryWindow}h
+              </strong>
+            </div>
+
+            <div className="policy-row">
+              <span>Expiry</span>
+              <strong>
+                {settings.recoveryExpiry}d
+              </strong>
+            </div>
+
+            <div className="policy-row">
+              <span>Channel</span>
+              <strong>
+                {settings.preferredChannel}
+              </strong>
+            </div>
+
+          </section>
+
+          <section className="settings-card compliance-summary">
+
+            <div className="settings-side-title">
+              <ShieldCheck size={17} />
+              Safety status
+            </div>
+
+            <div className="compliance-status">
+              <CheckCircle2 size={18} />
+
+              <div>
+                <strong>
+                  Guardrails enabled
+                </strong>
+
+                <span>
+                  Recovery actions are subject to configured
+                  customer-contact and attempt limits.
+                </span>
+              </div>
+            </div>
+
+          </section>
+
+        </aside>
+
       </div>
 
-      <Toast
-        toast={toast}
-        onClose={() => setToast(null)}
-      />
-    </>
+      {/* MOBILE SAVE BAR */}
+      <div className="settings-mobile-save">
+        <button
+          className="settings-save-button"
+          onClick={handleSave}
+        >
+          <Save size={16} />
+          Save changes
+        </button>
+      </div>
+
+    </div>
   );
 }
 
-function SettingsHeading({
-  icon: Icon,
+
+/* =========================================================
+   SECTION
+========================================================= */
+
+function SettingsSection({
+  icon,
   title,
   description,
+  children,
 }) {
   return (
-    <div className="settings-heading">
-      <div className="settings-icon">
-        <Icon size={19} />
+    <section className="settings-card">
+
+      <div className="settings-section-header">
+
+        <div className="settings-section-icon">
+          {icon}
+        </div>
+
+        <div>
+          <h2>{title}</h2>
+
+          <p>{description}</p>
+        </div>
+
       </div>
 
-      <div>
-        <h2>{title}</h2>
-        <p>{description}</p>
+      <div className="settings-section-body">
+        {children}
       </div>
-    </div>
+
+    </section>
   );
 }
 
-function Field({
-  label,
-  value,
-  onChange,
-}) {
-  return (
-    <div className="field">
-      <label>{label}</label>
 
-      <input
-        value={value}
-        onChange={(event) =>
-          onChange(event.target.value)
-        }
-      />
-    </div>
-  );
-}
+/* =========================================================
+   TOGGLE
+========================================================= */
 
-function ToggleRow({
+function SettingToggle({
   title,
   description,
   checked,
   onChange,
+  disabled = false,
 }) {
   return (
-    <div className="toggle-row">
-      <div>
-        <strong>{title}</strong>
-        <span>{description}</span>
+    <div
+      className={`setting-toggle-row ${
+        disabled ? "disabled" : ""
+      }`}
+    >
+
+      <div className="setting-toggle-content">
+
+        <h3>{title}</h3>
+
+        <p>{description}</p>
+
       </div>
 
       <button
         type="button"
-        className={`toggle ${checked ? "on" : ""}`}
+        className={`settings-switch ${
+          checked ? "active" : ""
+        }`}
+        disabled={disabled}
         onClick={() => onChange(!checked)}
         aria-label={title}
         aria-pressed={checked}
       >
         <span />
       </button>
+
     </div>
   );
 }
+
+
+/* =========================================================
+   SELECT
+========================================================= */
+
+function SettingSelect({
+  label,
+  description,
+  value,
+  onChange,
+  options,
+}) {
+  return (
+    <div className="setting-select">
+
+      <label>{label}</label>
+
+      <p>{description}</p>
+
+      <select
+        value={value}
+        onChange={(event) =>
+          onChange(event.target.value)
+        }
+      >
+        {options.map((option) => (
+          <option
+            key={option.value}
+            value={option.value}
+          >
+            {option.label}
+          </option>
+        ))}
+      </select>
+
+    </div>
+  );
+}
+
+
+/* =========================================================
+   SUMMARY ROW
+========================================================= */
+
+function SummaryRow({ label, enabled }) {
+  return (
+    <div className="settings-summary-row">
+
+      <span>{label}</span>
+
+      <strong className={enabled ? "enabled" : "disabled"}>
+        <span />
+        {enabled ? "Enabled" : "Off"}
+      </strong>
+
+    </div>
+  );
+}
+
+
+/* =========================================================
+   EXPORT
+========================================================= */

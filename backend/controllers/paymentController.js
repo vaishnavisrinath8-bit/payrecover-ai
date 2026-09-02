@@ -11,7 +11,9 @@ const {
 } = require("../services/recoveryService");
 
 /**
- * Create Razorpay order
+ * ============================================================
+ * CREATE RAZORPAY ORDER
+ * ============================================================
  */
 const createPaymentOrder = async (req, res) => {
   try {
@@ -92,7 +94,9 @@ const createPaymentOrder = async (req, res) => {
 };
 
 /**
- * Verify Razorpay payment
+ * ============================================================
+ * VERIFY RAZORPAY PAYMENT
+ * ============================================================
  */
 const verifyPayment = async (req, res) => {
   try {
@@ -115,7 +119,6 @@ const verifyPayment = async (req, res) => {
       });
     }
 
-    // Verify Razorpay signature
     const isValid = verifyPaymentSignature(
       razorpay_order_id,
       razorpay_payment_id,
@@ -130,13 +133,11 @@ const verifyPayment = async (req, res) => {
       });
     }
 
-    // Fetch payment from Razorpay
     const razorpayPayment =
       await fetchPayment(
         razorpay_payment_id
       );
 
-    // Determine status
     let paymentStatus =
       razorpayPayment.status;
 
@@ -146,7 +147,6 @@ const verifyPayment = async (req, res) => {
       paymentStatus = "success";
     }
 
-    // Update payment in MongoDB
     const payment =
       await Payment.findOneAndUpdate(
         {
@@ -175,9 +175,9 @@ const verifyPayment = async (req, res) => {
       });
     }
 
-    // ==========================================
+    // ========================================================
     // AUTOMATIC RECOVERY
-    // ==========================================
+    // ========================================================
 
     let recovery = null;
 
@@ -197,16 +197,8 @@ const verifyPayment = async (req, res) => {
           "Automatic recovery creation failed:",
           recoveryError.message
         );
-
-        // Payment itself remains recorded.
-        // Recovery failure should not make
-        // payment verification fail.
       }
     }
-
-    // ==========================================
-    // RESPONSE
-    // ==========================================
 
     return res.status(200).json({
       success: true,
@@ -266,7 +258,9 @@ const verifyPayment = async (req, res) => {
 };
 
 /**
- * Get payment status from Razorpay
+ * ============================================================
+ * GET PAYMENT STATUS
+ * ============================================================
  */
 const getPaymentStatus = async (
   req,
@@ -324,16 +318,41 @@ const getPaymentStatus = async (
       success: false,
       message:
         "Unable to fetch payment status",
-
       error: error.message,
     });
   }
 };
 
 /**
- * Get all payments
+ * ============================================================
+ * GET ALL PAYMENTS
+ * ============================================================
  *
  * GET /api/payments
+ *
+ * Filters:
+ * ?status=failed
+ * ?method=upi
+ * ?search=Rahul
+ *
+ * Pagination:
+ * ?page=1&limit=50
+ *
+ * IMPORTANT:
+ * If page/limit are NOT provided,
+ * all matching payments are returned.
+ *
+ * Examples:
+ *
+ * /api/payments
+ *
+ * /api/payments?limit=50&page=1
+ *
+ * /api/payments?status=failed
+ *
+ * /api/payments?search=rahul
+ *
+ * ============================================================
  */
 const getPayments = async (
   req,
@@ -344,19 +363,31 @@ const getPayments = async (
       status,
       method,
       search,
-      limit = 50,
-      page = 1,
+      page,
+      limit,
     } = req.query;
 
     const query = {};
+
+    // ========================================================
+    // STATUS FILTER
+    // ========================================================
 
     if (status) {
       query.paymentStatus = status;
     }
 
+    // ========================================================
+    // METHOD FILTER
+    // ========================================================
+
     if (method) {
       query.paymentMethod = method;
     }
+
+    // ========================================================
+    // SEARCH
+    // ========================================================
 
     if (search) {
       query.$or = [
@@ -387,40 +418,80 @@ const getPayments = async (
       ];
     }
 
-    const pageNumber =
-      Math.max(
-        Number(page),
-        1
-      );
+    // ========================================================
+    // TOTAL COUNT
+    // ========================================================
 
-    const limitNumber =
-      Math.min(
-        Math.max(
-          Number(limit),
-          1
-        ),
-        100
-      );
-
-    const skip =
-      (pageNumber - 1) *
-      limitNumber;
-
-    const [
-      payments,
-      total,
-    ] = await Promise.all([
-      Payment.find(query)
-        .sort({
-          createdAt: -1,
-        })
-        .skip(skip)
-        .limit(limitNumber),
-
-      Payment.countDocuments(
+    const total =
+      await Payment.countDocuments(
         query
-      ),
-    ]);
+      );
+
+    // ========================================================
+    // PAGINATION
+    //
+    // Only apply pagination when the user explicitly
+    // supplies page or limit.
+    // ========================================================
+
+    const paginationRequested =
+      page !== undefined ||
+      limit !== undefined;
+
+    let paymentsQuery =
+      Payment.find(query).sort({
+        createdAt: -1,
+      });
+
+    let pageNumber = 1;
+    let limitNumber = total;
+    let skip = 0;
+    let pages = 1;
+
+    if (paginationRequested) {
+      pageNumber =
+        Math.max(
+          Number(page) || 1,
+          1
+        );
+
+      limitNumber =
+        Math.min(
+          Math.max(
+            Number(limit) || 50,
+            1
+          ),
+          500
+        );
+
+      skip =
+        (pageNumber - 1) *
+        limitNumber;
+
+      pages =
+        total > 0
+          ? Math.ceil(
+              total /
+                limitNumber
+            )
+          : 1;
+
+      paymentsQuery =
+        paymentsQuery
+          .skip(skip)
+          .limit(limitNumber);
+    }
+
+    // ========================================================
+    // FETCH PAYMENTS
+    // ========================================================
+
+    const payments =
+      await paymentsQuery;
+
+    // ========================================================
+    // RESPONSE
+    // ========================================================
 
     return res.status(200).json({
       success: true,
@@ -431,13 +502,31 @@ const getPayments = async (
       total,
 
       page:
-        pageNumber,
+        paginationRequested
+          ? pageNumber
+          : 1,
 
       pages:
-        Math.ceil(
-          total /
-            limitNumber
-        ),
+        paginationRequested
+          ? pages
+          : 1,
+
+      pagination:
+        paginationRequested
+          ? {
+              enabled: true,
+              page: pageNumber,
+              limit: limitNumber,
+              pages,
+              total,
+            }
+          : {
+              enabled: false,
+              page: 1,
+              limit: total,
+              pages: 1,
+              total,
+            },
 
       data:
         payments,
@@ -461,9 +550,9 @@ const getPayments = async (
 };
 
 /**
- * Get dashboard statistics
- *
- * GET /api/payments/stats
+ * ============================================================
+ * GET PAYMENT STATISTICS
+ * ============================================================
  */
 const getPaymentStats = async (
   req,
@@ -518,6 +607,10 @@ const getPaymentStats = async (
       }),
     ]);
 
+    // ========================================================
+    // TOTAL REVENUE
+    // ========================================================
+
     const revenueResult =
       await Payment.aggregate([
         {
@@ -538,12 +631,44 @@ const getPaymentStats = async (
         },
       ]);
 
+    // ========================================================
+    // RECOVERED REVENUE
+    // ========================================================
+
     const recoveredRevenueResult =
       await Payment.aggregate([
         {
           $match: {
             recoveryStatus:
               "recovered",
+          },
+        },
+
+        {
+          $group: {
+            _id: null,
+
+            total: {
+              $sum: "$amount",
+            },
+          },
+        },
+      ]);
+
+    // ========================================================
+    // REVENUE AT RISK
+    // ========================================================
+
+    const revenueAtRiskResult =
+      await Payment.aggregate([
+        {
+          $match: {
+            paymentStatus:
+              "failed",
+
+            recoveryStatus: {
+              $ne: "recovered",
+            },
           },
         },
 
@@ -566,6 +691,14 @@ const getPaymentStats = async (
       recoveredRevenueResult[0]
         ?.total || 0;
 
+    const revenueAtRisk =
+      revenueAtRiskResult[0]
+        ?.total || 0;
+
+    // ========================================================
+    // SUCCESS RATE
+    // ========================================================
+
     const successRate =
       totalPayments > 0
         ? (
@@ -574,6 +707,10 @@ const getPaymentStats = async (
             100
           ).toFixed(1)
         : 0;
+
+    // ========================================================
+    // RECOVERY RATE
+    // ========================================================
 
     const recoveryBase =
       failedPayments;
@@ -586,6 +723,51 @@ const getPaymentStats = async (
             100
           ).toFixed(1)
         : 0;
+
+    // ========================================================
+    // FAILED REVENUE
+    // ========================================================
+
+    const failedRevenueResult =
+      await Payment.aggregate([
+        {
+          $match: {
+            paymentStatus:
+              "failed",
+          },
+        },
+
+        {
+          $group: {
+            _id: null,
+
+            total: {
+              $sum: "$amount",
+            },
+          },
+        },
+      ]);
+
+    const failedRevenue =
+      failedRevenueResult[0]
+        ?.total || 0;
+
+    // ========================================================
+    // RECOVERY VALUE RATE
+    // ========================================================
+
+    const recoveryValueRate =
+      failedRevenue > 0
+        ? (
+            (recoveredRevenue /
+              failedRevenue) *
+            100
+          ).toFixed(1)
+        : 0;
+
+    // ========================================================
+    // RESPONSE
+    // ========================================================
 
     return res.status(200).json({
       success: true,
@@ -620,6 +802,15 @@ const getPaymentStats = async (
         totalRevenue,
 
         recoveredRevenue,
+
+        revenueAtRisk,
+
+        failedRevenue,
+
+        recoveryValueRate:
+          Number(
+            recoveryValueRate
+          ),
       },
     });
   } catch (error) {
@@ -641,9 +832,16 @@ const getPaymentStats = async (
 };
 
 /**
- * Get recent payments
+ * ============================================================
+ * GET RECENT PAYMENTS
+ * ============================================================
  *
  * GET /api/payments/recent
+ *
+ * Default: 5
+ * Maximum: 20
+ *
+ * ============================================================
  */
 const getRecentPayments =
   async (req, res) => {
@@ -697,7 +895,6 @@ module.exports = {
   createPaymentOrder,
   verifyPayment,
   getPaymentStatus,
-
   getPayments,
   getPaymentStats,
   getRecentPayments,

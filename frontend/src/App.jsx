@@ -1,10 +1,6 @@
+
 import React from "react";
-import {
-  BrowserRouter,
-  Navigate,
-  Route,
-  Routes,
-} from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 
 import Layout from "./components/Layout";
 
@@ -15,72 +11,44 @@ import Analytics from "./pages/Analytics";
 import Notifications from "./pages/Notifications";
 import Account from "./pages/Account";
 import Settings from "./pages/Settings";
+import PaymentDetails from "./pages/PaymentDetails";
 
-export default function App() {
+function App() {
   return (
-    <BrowserRouter>
-      <Routes>
+    <Routes>
+      <Route path="/" element={<Layout />}>
+        <Route index element={<Navigate to="/dashboard" replace />} />
 
-        <Route element={<Layout />}>
+        <Route path="dashboard" element={<Dashboard />} />
 
-          <Route
-            path="/"
-            element={
-              <Navigate
-                to="/dashboard"
-                replace
-              />
-            }
-          />
+        <Route path="payments" element={<Payments />} />
 
-          <Route
-            path="/dashboard"
-            element={<Dashboard />}
-          />
+        <Route
+          path="payments/:id"
+          element={<PaymentDetails />}
+        />
 
-          <Route
-            path="/payments"
-            element={<Payments />}
-          />
+        <Route path="recoveries" element={<Recoveries />} />
 
-          <Route
-            path="/recoveries"
-            element={<Recoveries />}
-          />
+        <Route path="analytics" element={<Analytics />} />
 
-          <Route
-            path="/analytics"
-            element={<Analytics />}
-          />
+        <Route
+          path="notifications"
+          element={<Notifications />}
+        />
 
-          <Route
-            path="/notifications"
-            element={<Notifications />}
-          />
+        <Route path="account" element={<Account />} />
 
-          <Route
-            path="/account"
-            element={<Account />}
-          />
+        <Route path="settings" element={<Settings />} />
 
-          <Route
-            path="/settings"
-            element={<Settings />}
-          />
-
-          <Route
-            path="*"
-            element={
-              <Navigate
-                to="/dashboard"
-                replace
-              />
-            }
-          />
-
-        </Route>
-
-      </Routes>
-    </BrowserRouter>
+        <Route
+          path="*"
+          element={<Navigate to="/dashboard" replace />}
+        />
+      </Route>
+    </Routes>
   );
 }
+
+export default App;
+

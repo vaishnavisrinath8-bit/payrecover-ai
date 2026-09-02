@@ -1,595 +1,609 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
+  Building2,
   CheckCircle2,
-  Eye,
+  Edit3,
   Mail,
-  RefreshCw,
-  RotateCcw,
-  Send,
+  MapPin,
+  Phone,
+  Save,
+  ShieldCheck,
+  User,
   X,
 } from "lucide-react";
 
-import {
-  getAllRecoveries,
-  getRecoveryById,
-  sendRecoveryEmail,
-} from "../services/api";
+import "./Account.css";
 
-import {
-  EmptyState,
-  ErrorState,
-  formatCurrency,
-  formatDate,
-  formatDateTime,
-  StatusBadge,
-  Toast,
-} from "../components/UI";
+const DEFAULT_ACCOUNT = {
+  fullName: "PayRecover Admin",
+  email: "admin@payrecover.ai",
+  phone: "+91 98765 43210",
+  role: "Administrator",
 
-export default function Recoveries() {
-  const [recoveries, setRecoveries] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  companyName: "PayRecover Technologies",
+  industry: "Technology / SaaS",
+  location: "Bengaluru, India",
+  timezone: "Asia/Kolkata",
+};
 
-  const [selectedRecovery, setSelectedRecovery] =
-    useState(null);
+function loadAccount() {
+  try {
+    const stored = localStorage.getItem("payrecover_account");
 
-  const [detailLoading, setDetailLoading] =
-    useState(false);
-
-  const [sendLoading, setSendLoading] = useState(null);
-
-  const [toast, setToast] = useState(null);
-
-  const loadRecoveries = async () => {
-    setLoading(true);
-    setError("");
-
-    try {
-      const response = await getAllRecoveries();
-      setRecoveries(response?.data || []);
-    } catch (err) {
-      console.error(err);
-
-      setError(
-        err?.response?.data?.message ||
-          "Unable to load recovery workflows."
-      );
-      setRecoveries([]);
-    } finally {
-      setLoading(false);
+    if (stored) {
+      return {
+        ...DEFAULT_ACCOUNT,
+        ...JSON.parse(stored),
+      };
     }
-  };
+  } catch (error) {
+    console.error("Failed to load account:", error);
+  }
+
+  return { ...DEFAULT_ACCOUNT };
+}
+
+export default function Account() {
+  const [account, setAccount] = useState(loadAccount);
+  const [draft, setDraft] = useState(loadAccount);
+  const [editing, setEditing] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    loadRecoveries();
+    const currentAccount = loadAccount();
+
+    setAccount(currentAccount);
+    setDraft(currentAccount);
   }, []);
 
-  useEffect(() => {
-    if (!toast) return;
-
-    const timer = setTimeout(() => {
-      setToast(null);
-    }, 3500);
-
-    return () => clearTimeout(timer);
-  }, [toast]);
-
-  const summary = useMemo(() => {
-    const total = recoveries.length;
-
-    const successful = recoveries.filter((item) =>
-      ["recovered", "completed", "success", "successful"].includes(
-        String(item.status || item.recoveryStatus).toLowerCase()
-      )
-    ).length;
-
-    const active = recoveries.filter((item) =>
-      ["pending", "in_progress", "processing", "sent"].includes(
-        String(item.status || item.recoveryStatus).toLowerCase()
-      )
-    ).length;
-
-    const failed = recoveries.filter((item) =>
-      ["failed", "unrecoverable"].includes(
-        String(item.status || item.recoveryStatus).toLowerCase()
-      )
-    ).length;
-
-    return {
-      total,
-      successful,
-      active,
-      failed,
-    };
-  }, [recoveries]);
-
-  const viewRecovery = async (id) => {
-    if (!id) return;
-
-    setDetailLoading(true);
-
-    try {
-      const response = await getRecoveryById(id);
-      setSelectedRecovery(response?.data || null);
-    } catch (err) {
-      setToast({
-        type: "error",
-        message:
-          err?.response?.data?.message ||
-          "Unable to load recovery details.",
-      });
-    } finally {
-      setDetailLoading(false);
-    }
+  const handleEdit = () => {
+    setDraft({ ...account });
+    setEditing(true);
+    setSaved(false);
   };
 
-  const sendEmail = async (id) => {
-    if (!id) return;
+  const handleCancel = () => {
+    setDraft({ ...account });
+    setEditing(false);
+    setSaved(false);
+  };
 
-    setSendLoading(id);
+  const handleChange = (field, value) => {
+    setDraft((previous) => ({
+      ...previous,
+      [field]: value,
+    }));
+  };
 
+  const handleSave = () => {
     try {
-      await sendRecoveryEmail(id);
+      localStorage.setItem(
+        "payrecover_account",
+        JSON.stringify(draft)
+      );
 
-      setToast({
-        type: "success",
-        message:
-          "Recovery email request sent successfully.",
-      });
+      setAccount({ ...draft });
+      setDraft({ ...draft });
+      setEditing(false);
+      setSaved(true);
 
-      await loadRecoveries();
-    } catch (err) {
-      console.error(err);
-
-      setToast({
-        type: "error",
-        message:
-          err?.response?.data?.message ||
-          "Unable to send recovery email.",
-      });
-    } finally {
-      setSendLoading(null);
+      setTimeout(() => {
+        setSaved(false);
+      }, 3000);
+    } catch (error) {
+      console.error("Failed to save account:", error);
     }
   };
 
   return (
-    <>
-      <div className="page-header">
+    <div className="account-page">
+
+      {/* HEADER */}
+      <div className="account-header">
         <div>
-          <span className="eyebrow">Recovery operations</span>
-          <h1>Payment recoveries</h1>
+          <div className="account-eyebrow">
+            <User size={15} />
+            ACCOUNT MANAGEMENT
+          </div>
+
+          <h1>Account</h1>
+
           <p>
-            Track failed-payment recovery workflows and
-            communicate with customers.
+            Manage your personal profile, business information and
+            account security.
           </p>
         </div>
 
-        <button
-          className="btn secondary"
-          onClick={loadRecoveries}
-          disabled={loading}
-        >
-          <RefreshCw
-            size={17}
-            className={loading ? "spin" : ""}
-          />
-          Refresh
-        </button>
+        <div className="account-header-actions">
+
+          {saved && (
+            <div className="account-save-success">
+              <CheckCircle2 size={17} />
+              Changes saved
+            </div>
+          )}
+
+          {!editing ? (
+            <button
+              className="account-primary-button"
+              onClick={handleEdit}
+            >
+              <Edit3 size={17} />
+              Edit profile
+            </button>
+          ) : (
+            <>
+              <button
+                className="account-secondary-button"
+                onClick={handleCancel}
+              >
+                <X size={17} />
+                Cancel
+              </button>
+
+              <button
+                className="account-primary-button"
+                onClick={handleSave}
+              >
+                <Save size={17} />
+                Save changes
+              </button>
+            </>
+          )}
+
+        </div>
       </div>
 
-      <div className="recovery-summary">
-        <SummaryCard
-          title="Total recoveries"
-          value={summary.total}
-          icon={RotateCcw}
-        />
+      <div className="account-layout">
 
-        <SummaryCard
-          title="Recovered"
-          value={summary.successful}
-          icon={CheckCircle2}
-        />
+        <main className="account-main">
 
-        <SummaryCard
-          title="Active workflows"
-          value={summary.active}
-          icon={RefreshCw}
-        />
+          {/* PERSONAL INFORMATION */}
+          <section className="account-card">
 
-        <SummaryCard
-          title="Unsuccessful"
-          value={summary.failed}
-          icon={X}
-        />
-      </div>
+            <div className="account-card-header">
+              <div>
+                <h2>Personal information</h2>
 
-      <div className="card table-card">
-        <div className="table-card-header">
-          <div>
-            <h2>Recovery workflows</h2>
+                <p>
+                  Manage the personal details associated with
+                  your PayRecover account.
+                </p>
+              </div>
+
+              <div className="account-section-icon">
+                <User size={19} />
+              </div>
+            </div>
+
+            {/* PROFILE SUMMARY */}
+            <div className="profile-summary">
+
+              <div className="profile-avatar">
+                {draft.fullName
+                  ? draft.fullName.charAt(0).toUpperCase()
+                  : "P"}
+              </div>
+
+              <div className="profile-summary-content">
+
+                <h3>
+                  {draft.fullName || "Your name"}
+                </h3>
+
+                <span>
+                  {draft.role || "Administrator"}
+                </span>
+
+                <div className="profile-email">
+                  <Mail size={14} />
+                  {draft.email || "No email configured"}
+                </div>
+
+              </div>
+
+              <div className="account-active-badge">
+                <span />
+                Active
+              </div>
+
+            </div>
+
+            <div className="account-divider" />
+
+            <div className="account-form-grid">
+
+              <AccountField
+                label="Full name"
+                value={draft.fullName}
+                editing={editing}
+                onChange={(value) =>
+                  handleChange("fullName", value)
+                }
+              />
+
+              <AccountField
+                label="Email address"
+                value={draft.email}
+                editing={editing}
+                type="email"
+                icon={<Mail size={14} />}
+                onChange={(value) =>
+                  handleChange("email", value)
+                }
+              />
+
+              <AccountField
+                label="Phone number"
+                value={draft.phone}
+                editing={editing}
+                type="tel"
+                icon={<Phone size={14} />}
+                onChange={(value) =>
+                  handleChange("phone", value)
+                }
+              />
+
+              <AccountField
+                label="Role"
+                value={draft.role}
+                editing={editing}
+                onChange={(value) =>
+                  handleChange("role", value)
+                }
+              />
+
+            </div>
+
+          </section>
+
+          {/* BUSINESS INFORMATION */}
+          <section className="account-card">
+
+            <div className="account-card-header">
+
+              <div>
+                <h2>Business information</h2>
+
+                <p>
+                  Manage your organization's profile and
+                  workspace information.
+                </p>
+              </div>
+
+              <div className="account-section-icon">
+                <Building2 size={19} />
+              </div>
+
+            </div>
+
+            <div className="account-form-grid">
+
+              <AccountField
+                label="Company name"
+                value={draft.companyName}
+                editing={editing}
+                icon={<Building2 size={14} />}
+                onChange={(value) =>
+                  handleChange("companyName", value)
+                }
+              />
+
+              <AccountField
+                label="Industry"
+                value={draft.industry}
+                editing={editing}
+                onChange={(value) =>
+                  handleChange("industry", value)
+                }
+              />
+
+              <AccountField
+                label="Location"
+                value={draft.location}
+                editing={editing}
+                icon={<MapPin size={14} />}
+                onChange={(value) =>
+                  handleChange("location", value)
+                }
+              />
+
+              <AccountField
+                label="Timezone"
+                value={draft.timezone}
+                editing={editing}
+                onChange={(value) =>
+                  handleChange("timezone", value)
+                }
+              />
+
+            </div>
+
+          </section>
+
+          {/* SECURITY */}
+          <section className="account-card security-card">
+
+            <div className="account-card-header">
+
+              <div>
+                <h2>Security</h2>
+
+                <p>
+                  Keep your PayRecover account protected.
+                </p>
+              </div>
+
+              <div className="account-section-icon">
+                <ShieldCheck size={19} />
+              </div>
+
+            </div>
+
+            <div className="security-row">
+
+              <div className="security-row-icon">
+                <ShieldCheck size={18} />
+              </div>
+
+              <div className="security-row-content">
+
+                <h3>Account security</h3>
+
+                <p>
+                  Your account is currently protected by
+                  standard authentication.
+                </p>
+
+              </div>
+
+              <div className="security-status">
+                <CheckCircle2 size={15} />
+                Protected
+              </div>
+
+            </div>
+
+            <div className="security-row">
+
+              <div className="security-row-icon">
+                <Mail size={18} />
+              </div>
+
+              <div className="security-row-content">
+
+                <h3>Email verification</h3>
+
+                <p>
+                  Your account email address is configured
+                  for recovery communications.
+                </p>
+
+              </div>
+
+              <div className="security-status">
+                <CheckCircle2 size={15} />
+                Verified
+              </div>
+
+            </div>
+
+            <div className="security-row">
+
+              <div className="security-row-icon">
+                <Phone size={18} />
+              </div>
+
+              <div className="security-row-content">
+
+                <h3>Recovery contact</h3>
+
+                <p>
+                  A phone number is available for account
+                  notifications.
+                </p>
+
+              </div>
+
+              <div className="security-status">
+                <CheckCircle2 size={15} />
+                Configured
+              </div>
+
+            </div>
+
+          </section>
+
+        </main>
+
+        {/* SIDEBAR */}
+        <aside className="account-sidebar">
+
+          {/* STATUS */}
+          <section className="account-card account-status-card">
+
+            <div className="status-card-top">
+
+              <div className="status-icon">
+                <CheckCircle2 size={23} />
+              </div>
+
+              <div>
+                <span className="status-label">
+                  ACCOUNT STATUS
+                </span>
+
+                <h2>Active</h2>
+              </div>
+
+            </div>
+
             <p>
-              Real recovery records returned by the backend
+              Your PayRecover workspace is active and ready
+              to process recovery workflows.
             </p>
-          </div>
-        </div>
 
-        {loading ? (
-          <div className="table-loading">
-            <RefreshCw className="spin" />
-            Loading recovery workflows...
-          </div>
-        ) : error ? (
-          <ErrorState
-            message={error}
-            onRetry={loadRecoveries}
-          />
-        ) : recoveries.length === 0 ? (
-          <EmptyState
-            title="No recovery workflows"
-            description="Create a recovery from a failed payment to begin tracking recovery activity."
-          />
-        ) : (
-          <div className="table-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>Customer</th>
-                  <th>Payment ID</th>
-                  <th>Amount</th>
-                  <th>Status</th>
-                  <th>Attempts</th>
-                  <th>Created</th>
-                  <th>Last activity</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {recoveries.map((recovery) => {
-                  const payment =
-                    recovery.payment ||
-                    recovery.paymentId ||
-                    {};
-
-                  const customerName =
-                    recovery.customerName ||
-                    payment.customerName ||
-                    "Unknown customer";
-
-                  const amount =
-                    recovery.amount ?? payment.amount;
-
-                  const paymentId =
-                    typeof recovery.paymentId === "object"
-                      ? recovery.paymentId?._id
-                      : recovery.paymentId;
-
-                  const status =
-                    recovery.recoveryStatus ||
-                    recovery.status ||
-                    "pending";
-
-                  const attempts =
-                    recovery.retryCount ??
-                    recovery.attemptCount ??
-                    recovery.attempts ??
-                    0;
-
-                  return (
-                    <tr key={recovery._id}>
-                      <td>
-                        <div className="customer-cell">
-                          <div className="table-avatar">
-                            {customerName
-                              .charAt(0)
-                              .toUpperCase()}
-                          </div>
-
-                          <div>
-                            <strong>{customerName}</strong>
-                            <span>
-                              {recovery.customerEmail ||
-                                payment.customerEmail ||
-                                "No email"}
-                            </span>
-                          </div>
-                        </div>
-                      </td>
-
-                      <td>
-                        <span className="mono">
-                          {paymentId || "Not available"}
-                        </span>
-                      </td>
-
-                      <td>
-                        {amount != null
-                          ? formatCurrency(
-                              amount,
-                              recovery.currency ||
-                                payment.currency ||
-                                "INR"
-                            )
-                          : "Not available"}
-                      </td>
-
-                      <td>
-                        <StatusBadge status={status} />
-                      </td>
-
-                      <td>{attempts}</td>
-
-                      <td>
-                        {formatDate(recovery.createdAt)}
-                      </td>
-
-                      <td>
-                        {formatDate(
-                          recovery.updatedAt ||
-                            recovery.lastActivityAt ||
-                            recovery.createdAt
-                        )}
-                      </td>
-
-                      <td>
-                        <div className="row-actions">
-                          <button
-                            className="icon-action"
-                            title="View recovery"
-                            onClick={() =>
-                              viewRecovery(recovery._id)
-                            }
-                          >
-                            <Eye size={17} />
-                          </button>
-
-                          <button
-                            className="icon-action recovery"
-                            title="Send recovery email"
-                            disabled={
-                              sendLoading === recovery._id
-                            }
-                            onClick={() =>
-                              sendEmail(recovery._id)
-                            }
-                          >
-                            {sendLoading === recovery._id ? (
-                              <RefreshCw
-                                size={17}
-                                className="spin"
-                              />
-                            ) : (
-                              <Mail size={17} />
-                            )}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      {selectedRecovery && (
-        <RecoveryModal
-          recovery={selectedRecovery}
-          onClose={() => setSelectedRecovery(null)}
-          onSend={sendEmail}
-          sendLoading={sendLoading}
-        />
-      )}
-
-      {detailLoading && (
-        <div className="modal-backdrop">
-          <div className="loading-modal">
-            <RefreshCw className="spin" size={25} />
-            Loading recovery details...
-          </div>
-        </div>
-      )}
-
-      <Toast
-        toast={toast}
-        onClose={() => setToast(null)}
-      />
-    </>
-  );
-}
-
-function SummaryCard({
-  title,
-  value,
-  icon: Icon,
-}) {
-  return (
-    <div className="summary-card">
-      <div className="summary-icon">
-        <Icon size={19} />
-      </div>
-
-      <div>
-        <span>{title}</span>
-        <strong>{value.toLocaleString("en-IN")}</strong>
-      </div>
-    </div>
-  );
-}
-
-function RecoveryModal({
-  recovery,
-  onClose,
-  onSend,
-  sendLoading,
-}) {
-  const payment =
-    recovery.payment ||
-    recovery.paymentId ||
-    {};
-
-  const status =
-    recovery.recoveryStatus ||
-    recovery.status ||
-    "pending";
-
-  const paymentId =
-    typeof recovery.paymentId === "object"
-      ? recovery.paymentId?._id
-      : recovery.paymentId;
-
-  return (
-    <div
-      className="modal-backdrop"
-      onMouseDown={onClose}
-    >
-      <div
-        className="modal recovery-modal"
-        onMouseDown={(event) =>
-          event.stopPropagation()
-        }
-      >
-        <div className="modal-header">
-          <div>
-            <span className="eyebrow">
-              Recovery workflow
-            </span>
-            <h2>Recovery details</h2>
-          </div>
-
-          <button className="icon-btn" onClick={onClose}>
-            <X size={20} />
-          </button>
-        </div>
-
-        <div className="modal-body">
-          <div className="recovery-detail-banner">
-            <div className="recovery-detail-icon">
-              <RotateCcw size={22} />
+            <div className="status-line">
+              <span>Workspace</span>
+              <strong>PayRecover AI</strong>
             </div>
 
-            <div>
+            <div className="status-line">
+              <span>Access level</span>
               <strong>
-                {recovery.customerName ||
-                  payment.customerName ||
-                  "Unknown customer"}
+                {account.role || "Administrator"}
               </strong>
-
-              <span>
-                {recovery.customerEmail ||
-                  payment.customerEmail ||
-                  "No email"}
-              </span>
             </div>
 
-            <StatusBadge status={status} />
-          </div>
+          </section>
 
-          <div className="detail-section">
-            <div className="detail-section-title">
-              <Send size={17} />
-              Recovery information
+          {/* CONTACT */}
+          <section className="account-card contact-card">
+
+            <div className="sidebar-card-title">
+              <Mail size={17} />
+              Contact information
             </div>
 
-            <div className="detail-grid">
-              <Detail
-                label="Recovery ID"
-                value={recovery._id}
-                mono
-              />
+            <div className="contact-item">
 
-              <Detail
-                label="Payment ID"
-                value={paymentId}
-                mono
-              />
+              <Mail size={15} />
 
-              <Detail
-                label="Amount"
-                value={
-                  recovery.amount != null
-                    ? formatCurrency(
-                        recovery.amount,
-                        recovery.currency ||
-                          payment.currency ||
-                          "INR"
-                      )
-                    : payment.amount != null
-                    ? formatCurrency(
-                        payment.amount,
-                        payment.currency || "INR"
-                      )
-                    : "Not available"
-                }
-              />
+              <div>
+                <span>Email</span>
 
-              <Detail
-                label="Attempts"
-                value={
-                  recovery.retryCount ??
-                  recovery.attemptCount ??
-                  recovery.attempts ??
-                  0
-                }
-              />
+                <strong>
+                  {account.email}
+                </strong>
+              </div>
 
-              <Detail
-                label="Created"
-                value={formatDateTime(
-                  recovery.createdAt
-                )}
-              />
-
-              <Detail
-                label="Last activity"
-                value={formatDateTime(
-                  recovery.updatedAt ||
-                    recovery.lastActivityAt
-                )}
-              />
             </div>
-          </div>
-        </div>
 
-        <div className="modal-footer">
-          <button
-            className="btn secondary"
-            onClick={onClose}
-          >
-            Close
-          </button>
+            <div className="contact-item">
 
-          <button
-            className="btn primary"
-            disabled={sendLoading === recovery._id}
-            onClick={() => onSend(recovery._id)}
-          >
-            {sendLoading === recovery._id ? (
-              <>
-                <RefreshCw size={17} className="spin" />
-                Sending...
-              </>
-            ) : (
-              <>
-                <Mail size={17} />
-                Send Recovery Email
-              </>
-            )}
-          </button>
-        </div>
+              <Phone size={15} />
+
+              <div>
+                <span>Phone</span>
+
+                <strong>
+                  {account.phone}
+                </strong>
+              </div>
+
+            </div>
+
+            <div className="contact-item">
+
+              <MapPin size={15} />
+
+              <div>
+                <span>Location</span>
+
+                <strong>
+                  {account.location}
+                </strong>
+              </div>
+
+            </div>
+
+          </section>
+
+          {/* WORKSPACE */}
+          <section className="account-card plan-card">
+
+            <div className="plan-header">
+
+              <div>
+                <span className="plan-label">
+                  WORKSPACE
+                </span>
+
+                <h2>
+                  Recovery Intelligence
+                </h2>
+              </div>
+
+              <div className="plan-badge">
+                ACTIVE
+              </div>
+
+            </div>
+
+            <p>
+              AI-powered payment recovery, monitoring
+              and revenue intelligence.
+            </p>
+
+            <div className="plan-feature">
+              <CheckCircle2 size={15} />
+              AI recovery workflows
+            </div>
+
+            <div className="plan-feature">
+              <CheckCircle2 size={15} />
+              Recovery analytics
+            </div>
+
+            <div className="plan-feature">
+              <CheckCircle2 size={15} />
+              Compliance guardrails
+            </div>
+
+          </section>
+
+        </aside>
+
       </div>
     </div>
   );
 }
 
-function Detail({ label, value, mono }) {
+
+/* =========================================================
+   ACCOUNT FIELD
+========================================================= */
+
+function AccountField({
+  label,
+  value,
+  editing,
+  onChange,
+  type = "text",
+  icon = null,
+}) {
   return (
-    <div className="detail-item">
-      <span>{label}</span>
-      <strong className={mono ? "mono" : ""}>
-        {value || "Not available"}
-      </strong>
+    <div className="account-field">
+
+      <label>{label}</label>
+
+      {editing ? (
+        <div className="account-input-wrapper">
+
+          {icon}
+
+          <input
+            type={type}
+            value={value || ""}
+            onChange={(event) =>
+              onChange(event.target.value)
+            }
+            placeholder={`Enter ${label.toLowerCase()}`}
+          />
+
+        </div>
+      ) : (
+        <div className="account-value">
+
+          {icon}
+
+          <span>
+            {value || "Not configured"}
+          </span>
+
+        </div>
+      )}
+
     </div>
   );
 }

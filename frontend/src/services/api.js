@@ -1,7 +1,8 @@
 import axios from "axios";
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:3001";
+  import.meta.env.VITE_API_URL ||
+  "http://localhost:3001/api";
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -11,85 +12,372 @@ const api = axios.create({
   timeout: 15000,
 });
 
-const unwrap = (response) => response.data;
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.error(
+      "PayRecover API Error:",
+      error?.response?.data ||
+        error?.message ||
+        error
+    );
 
-export const getPaymentStats = async () => {
-  const response = await api.get("/api/payments/stats");
-  return unwrap(response);
-};
+    return Promise.reject(error);
+  }
+);
 
-export const getRecentPayments = async (limit = 5) => {
-  const response = await api.get("/api/payments/recent", {
-    params: { limit },
+/* =========================================================
+   PAYMENTS
+========================================================= */
+
+export const getAllPayments = async (params = {}) => {
+  const response = await api.get("/payments", {
+    params,
   });
-  return unwrap(response);
+
+  return response.data;
 };
 
-export const getAllPayments = async ({
-  status = "",
-  method = "",
-  search = "",
+export const getPaymentsPaginated = async (
   page = 1,
   limit = 50,
-} = {}) => {
-  const params = {
-    page,
-    limit,
+  filters = {}
+) => {
+  const response = await api.get("/payments", {
+    params: {
+      page,
+      limit,
+      ...filters,
+    },
+  });
+
+  return response.data;
+};
+
+export const searchPayments = async (query) => {
+  if (!query || !query.trim()) {
+    return getAllPayments();
+  }
+
+  const response = await api.get("/payments", {
+    params: {
+      search: query.trim(),
+    },
+  });
+
+  return response.data;
+};
+
+export const getPaymentStats = async () => {
+  const response = await api.get("/payments/stats");
+
+  return response.data;
+};
+
+export const getRecentPayments = async (limit = 10) => {
+  const response = await api.get("/payments/recent", {
+    params: {
+      limit,
+    },
+  });
+
+  return response.data;
+};
+
+export const getPaymentById = async (id) => {
+  if (!id) {
+    throw new Error("Payment ID is required.");
+  }
+
+  const response = await api.get(`/payments/${id}`);
+
+  return response.data;
+};
+
+export const getPaymentStatus = async (id) => {
+  if (!id) {
+    throw new Error("Payment ID is required.");
+  }
+
+  const response = await api.get(`/payments/${id}`);
+
+  const data = response.data;
+
+  return {
+    ...data,
+    status:
+      data?.data?.paymentStatus ??
+      data?.paymentStatus ??
+      data?.data?.status ??
+      data?.status ??
+      null,
   };
-
-  if (status) params.status = status;
-  if (method) params.method = method;
-  if (search) params.search = search;
-
-  const response = await api.get("/api/payments", { params });
-  return unwrap(response);
 };
 
-export const createPaymentOrder = async (payload) => {
+export const createPaymentOrder = async (data) => {
   const response = await api.post(
-    "/api/payments/create-order",
-    payload
+    "/payments/create-order",
+    data
   );
-  return unwrap(response);
+
+  return response.data;
 };
 
-export const verifyPayment = async (payload) => {
+export const verifyPayment = async (data) => {
   const response = await api.post(
-    "/api/payments/verify",
-    payload
+    "/payments/verify",
+    data
   );
-  return unwrap(response);
+
+  return response.data;
 };
 
-export const getPaymentStatus = async (paymentId) => {
-  const response = await api.get(
-    `/api/payments/status/${paymentId}`
-  );
-  return unwrap(response);
+
+/* =========================================================
+   RECOVERIES
+========================================================= */
+
+export const getAllRecoveries = async (params = {}) => {
+  const response = await api.get("/recovery", {
+    params,
+  });
+
+  return response.data;
 };
 
-export const getAllRecoveries = async () => {
-  const response = await api.get("/api/recovery");
-  return unwrap(response);
+export const getRecoveries = async (params = {}) => {
+  return getAllRecoveries(params);
+};
+
+export const getRecoveriesPaginated = async (
+  page = 1,
+  limit = 50,
+  filters = {}
+) => {
+  const response = await api.get("/recovery", {
+    params: {
+      page,
+      limit,
+      ...filters,
+    },
+  });
+
+  return response.data;
+};
+
+export const searchRecoveries = async (query) => {
+  if (!query || !query.trim()) {
+    return getAllRecoveries();
+  }
+
+  const response = await api.get("/recovery", {
+    params: {
+      search: query.trim(),
+    },
+  });
+
+  return response.data;
 };
 
 export const getRecoveryById = async (id) => {
-  const response = await api.get(`/api/recovery/${id}`);
-  return unwrap(response);
+  if (!id) {
+    throw new Error("Recovery ID is required.");
+  }
+
+  const response = await api.get(
+    `/recovery/${id}`
+  );
+
+  return response.data;
 };
 
-export const createRecovery = async (paymentId) => {
-  const response = await api.post("/api/recovery/create", {
+export const getRecoveryQueue = async (
+  params = {}
+) => {
+  const response = await api.get(
+    "/recovery/queue",
+    {
+      params,
+    }
+  );
+
+  return response.data;
+};
+
+export const getRecoveryAnalytics = async () => {
+  const response = await api.get(
+    "/recovery/analytics"
+  );
+
+  return response.data;
+};
+
+
+/* =========================================================
+   RECOVERY WORKFLOW
+========================================================= */
+
+export const createRecovery = async (data) => {
+  if (!data?.paymentId) {
+    throw new Error("paymentId is required.");
+  }
+
+  const response = await api.post(
+    "/recovery/create",
+    data
+  );
+
+  return response.data;
+};
+
+
+export const sendRecovery = async (data) => {
+  if (!data?.recoveryId) {
+    throw new Error("recoveryId is required.");
+  }
+
+  const response = await api.post(
+    "/recovery/send",
+    data
+  );
+
+  return response.data;
+};
+
+
+export const retryPayment = async (paymentId) => {
+  if (!paymentId) {
+    throw new Error("Payment ID is required.");
+  }
+
+  return createRecovery({
     paymentId,
+    recommendedAction: "Retry payment",
   });
-  return unwrap(response);
 };
 
-export const sendRecoveryEmail = async (recoveryId) => {
-  const response = await api.post("/api/recovery/send", {
-    recoveryId,
-  });
-  return unwrap(response);
+
+export const markRecoveryRecovered = async (
+  recoveryId,
+  recoveredAmount
+) => {
+  if (!recoveryId) {
+    throw new Error("Recovery ID is required.");
+  }
+
+  const response = await api.post(
+    `/recovery/${recoveryId}/recovered`,
+    {
+      recoveredAmount,
+    }
+  );
+
+  return response.data;
 };
+
+
+export const markAsRecovered = async (
+  recoveryId,
+  recoveredAmount
+) => {
+  return markRecoveryRecovered(
+    recoveryId,
+    recoveredAmount
+  );
+};
+
+
+export const markRecoveryUnrecoverable = async (
+  recoveryId,
+  reason
+) => {
+  if (!recoveryId) {
+    throw new Error("Recovery ID is required.");
+  }
+
+  const response = await api.post(
+    `/recovery/${recoveryId}/unrecoverable`,
+    {
+      reason:
+        reason ||
+        "Recovery attempts exhausted.",
+    }
+  );
+
+  return response.data;
+};
+
+
+export const markAsUnrecoverable = async (
+  recoveryId,
+  reason
+) => {
+  return markRecoveryUnrecoverable(
+    recoveryId,
+    reason
+  );
+};
+
+
+/* =========================================================
+   LOCAL ACCOUNT / SETTINGS
+========================================================= */
+
+export const getNotifications = async () => {
+  try {
+    const response = await api.get(
+      "/notifications"
+    );
+
+    return response.data;
+  } catch {
+    return {
+      success: true,
+      data: [],
+    };
+  }
+};
+
+
+export const getAccount = async () => {
+  try {
+    const response = await api.get(
+      "/account"
+    );
+
+    return response.data;
+  } catch {
+    return {
+      success: true,
+      data: null,
+    };
+  }
+};
+
+
+export const getSettings = async () => {
+  try {
+    const response = await api.get(
+      "/settings"
+    );
+
+    return response.data;
+  } catch {
+    return {
+      success: true,
+      data: null,
+    };
+  }
+};
+
+
+export const checkHealth = async () => {
+  const response = await api.get(
+    "/health"
+  );
+
+  return response.data;
+};
+
 
 export default api;

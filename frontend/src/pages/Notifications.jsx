@@ -1,477 +1,570 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
+  AlertCircle,
   Bell,
   CheckCircle2,
-  AlertTriangle,
-  XCircle,
   Clock3,
-  RefreshCw,
-  Check,
   Mail,
+  RefreshCw,
   Search,
-  Trash2,
+  ShieldCheck,
+  XCircle,
+  Zap,
 } from "lucide-react";
 
-const initialNotifications = [
-  {
-    id: 1,
-    type: "error",
-    title: "Payment failed",
-    message:
-      "Payment pay_demo_00291 for ₹7,500 failed due to insufficient funds.",
-    time: "10 minutes ago",
-    status: "Unread",
-  },
-  {
-    id: 2,
-    type: "warning",
-    title: "Recovery action pending",
-    message:
-      "A recovery notification is waiting to be sent for payment pay_demo_00291.",
-    time: "24 minutes ago",
-    status: "Unread",
-  },
-  {
-    id: 3,
-    type: "success",
-    title: "Payment recovered",
-    message:
-      "Payment pay_demo_00002 was successfully recovered after 3 retry attempts.",
-    time: "1 hour ago",
-    status: "Read",
-  },
-  {
-    id: 4,
-    type: "warning",
-    title: "Pending payment",
-    message:
-      "Payment pay_demo_00170 has remained pending and should be monitored.",
-    time: "2 hours ago",
-    status: "Unread",
-  },
-  {
-    id: 5,
-    type: "success",
-    title: "Recovery completed",
-    message:
-      "₹799 from payment pay_demo_00154 has been successfully recovered.",
-    time: "3 hours ago",
-    status: "Read",
-  },
-  {
-    id: 6,
-    type: "error",
-    title: "Payment failure detected",
-    message:
-      "Payment pay_demo_00088 failed because of a network error. Automatic retry completed.",
-    time: "5 hours ago",
-    status: "Read",
-  },
-  {
-    id: 7,
-    type: "warning",
-    title: "Transaction limit exceeded",
-    message:
-      "Payment pay_demo_00008 exceeded the transaction limit. Recovery is currently in progress.",
-    time: "Yesterday",
-    status: "Unread",
-  },
-  {
-    id: 8,
-    type: "info",
-    title: "Recovery monitoring active",
-    message:
-      "The system is monitoring pending and failed transactions for recovery opportunities.",
-    time: "Yesterday",
-    status: "Read",
-  },
-];
+import {
+  getAllRecoveries,
+  getAllPayments,
+} from "../services/api";
+
+import "./Notifications.css";
+
+function formatCurrency(value) {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(Number(value || 0));
+}
+
+function formatDate(value) {
+  if (!value) return "Recently";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Recently";
+  }
+
+  return date.toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function getArray(response) {
+  if (Array.isArray(response)) return response;
+
+  if (Array.isArray(response?.data)) {
+    return response.data;
+  }
+
+  if (Array.isArray(response?.recoveries)) {
+    return response.recoveries;
+  }
+
+  if (Array.isArray(response?.data?.recoveries)) {
+    return response.data.recoveries;
+  }
+
+  if (Array.isArray(response?.data?.data)) {
+    return response.data.data;
+  }
+
+  return [];
+}
 
 export default function Notifications() {
-  const [notifications, setNotifications] =
-    useState(initialNotifications);
-
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
 
-  const [refreshing, setRefreshing] = useState(false);
+  async function loadNotifications(refresh = false) {
+    try {
+      if (refresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
 
-  const unreadCount = notifications.filter(
-    (item) => item.status === "Unread"
-  ).length;
+      const [recoveryResponse, paymentResponse] =
+        await Promise.all([
+          getAllRecoveries(),
+          getAllPayments(),
+        ]);
+
+      const recoveries = getArray(recoveryResponse);
+      const payments = getArray(paymentResponse);
+
+      const generated = [];
+
+      recoveries.forEach((recovery, index) => {
+        const status = String(
+          recovery?.status ||
+            recovery?.recoveryStatus ||
+            "pending"
+        ).toLowerCase();
+
+        const customer =
+          recovery?.customerName ||
+          recovery?.payment?.customerName ||
+          "Customer";
+
+        const amount = Number(
+          recovery?.amount ||
+            recovery?.payment?.amount ||
+            0
+        );
+
+        const failureReason =
+          recovery?.failureReason ||
+          recovery?.payment?.failureReason ||
+          recovery?.reason ||
+          "Payment failure";
+
+        const id =
+          recovery?._id ||
+          recovery?.id ||
+          `recovery-${index}`;
+
+        if (status === "recovered") {
+          generated.push({
+            id: `recovered-${id}`,
+            type: "success",
+            title: "Payment recovered",
+            message: `${customer} recovered ${formatCurrency(
+              recovery?.recoveredAmount || amount
+            )}.`,
+            timestamp:
+              recovery?.recoveredAt ||
+              recovery?.updatedAt,
+            unread: true,
+            category: "Recovery",
+          });
+        } else if (
+          status === "unrecoverable"
+        ) {
+          generated.push({
+            id: `unrecoverable-${id}`,
+            type: "danger",
+            title: "Recovery stopped",
+            message: `Recovery for ${customer} was marked unrecoverable.`,
+            timestamp:
+              recovery?.updatedAt,
+            unread: true,
+            category: "Recovery",
+          });
+        } else if (
+          status === "contacted"
+        ) {
+          generated.push({
+            id: `contacted-${id}`,
+            type: "info",
+            title: "Customer contacted",
+            message: `Recovery communication was initiated for ${customer}.`,
+            timestamp:
+              recovery?.lastActionAt ||
+              recovery?.lastAttemptAt ||
+              recovery?.updatedAt,
+            unread: false,
+            category: "Communication",
+          });
+        } else {
+          generated.push({
+            id: `active-${id}`,
+            type: "warning",
+            title: "Recovery requires attention",
+            message: `${customer} has ${failureReason} with ${formatCurrency(
+              amount
+            )} at risk.`,
+            timestamp:
+              recovery?.nextActionAt ||
+              recovery?.updatedAt ||
+              recovery?.createdAt,
+            unread: true,
+            category: "Recovery",
+          });
+        }
+      });
+
+      payments.forEach((payment, index) => {
+        const status = String(
+          payment?.paymentStatus || ""
+        ).toLowerCase();
+
+        if (status !== "failed") {
+          return;
+        }
+
+        const id =
+          payment?._id ||
+          payment?.id ||
+          `payment-${index}`;
+
+        generated.push({
+          id: `payment-failed-${id}`,
+          type: "danger",
+          title: "Payment failed",
+          message: `${
+            payment?.customerName || "Customer"
+          } payment of ${formatCurrency(
+            payment?.amount
+          )} failed due to ${
+            payment?.failureReason ||
+            "payment processing error"
+          }.`,
+          timestamp:
+            payment?.updatedAt ||
+            payment?.createdAt,
+          unread: true,
+          category: "Payments",
+        });
+      });
+
+      generated.sort((a, b) => {
+        const aTime = new Date(
+          a.timestamp || 0
+        ).getTime();
+
+        const bTime = new Date(
+          b.timestamp || 0
+        ).getTime();
+
+        return bTime - aTime;
+      });
+
+      setNotifications(generated);
+    } catch (error) {
+      console.error(
+        "Notifications error:",
+        error
+      );
+
+      setNotifications([]);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }
+
+  useEffect(() => {
+    loadNotifications();
+  }, []);
 
   const filteredNotifications = useMemo(() => {
-    const query = search.trim().toLowerCase();
+    const query = search
+      .trim()
+      .toLowerCase();
 
-    return notifications.filter((notification) => {
-      const matchesSearch =
-        !query ||
-        notification.title.toLowerCase().includes(query) ||
-        notification.message.toLowerCase().includes(query);
+    return notifications.filter(
+      (notification) => {
+        const matchesSearch =
+          !query ||
+          notification.title
+            .toLowerCase()
+            .includes(query) ||
+          notification.message
+            .toLowerCase()
+            .includes(query) ||
+          notification.category
+            .toLowerCase()
+            .includes(query);
 
-      const matchesFilter =
-        filter === "all" ||
-        (filter === "unread" &&
-          notification.status === "Unread") ||
-        (filter === "read" &&
-          notification.status === "Read");
+        const matchesFilter =
+          filter === "all" ||
+          notification.type === filter;
 
-      return matchesSearch && matchesFilter;
-    });
+        return (
+          matchesSearch &&
+          matchesFilter
+        );
+      }
+    );
   }, [notifications, search, filter]);
 
-  const markAsRead = (id) => {
-    setNotifications((current) =>
-      current.map((notification) =>
-        notification.id === id
-          ? {
-              ...notification,
-              status: "Read",
-            }
-          : notification
-      )
-    );
-  };
+  const unreadCount = notifications.filter(
+    (item) => item.unread
+  ).length;
 
-  const markAllAsRead = () => {
-    setNotifications((current) =>
-      current.map((notification) => ({
-        ...notification,
-        status: "Read",
-      }))
-    );
-  };
+  const recoveryAlerts = notifications.filter(
+    (item) =>
+      item.category === "Recovery"
+  ).length;
 
-  const deleteNotification = (id) => {
-    setNotifications((current) =>
-      current.filter((notification) => notification.id !== id)
-    );
-  };
+  const paymentAlerts = notifications.filter(
+    (item) =>
+      item.category === "Payments"
+  ).length;
 
-  const clearAll = () => {
-    setNotifications([]);
-  };
+  function iconForType(type) {
+    if (type === "success") {
+      return <CheckCircle2 size={19} />;
+    }
 
-  const refreshNotifications = () => {
-    setRefreshing(true);
+    if (type === "danger") {
+      return <XCircle size={19} />;
+    }
 
-    setTimeout(() => {
-      setNotifications(initialNotifications);
-      setRefreshing(false);
-    }, 700);
-  };
+    if (type === "warning") {
+      return <AlertCircle size={19} />;
+    }
+
+    return <Bell size={19} />;
+  }
 
   return (
     <div className="notifications-page">
-      {/* =====================================================
-          PAGE HEADER
-          ===================================================== */}
-
       <div className="notifications-header">
         <div>
-          <h1 className="notifications-title">
-            Notifications
-          </h1>
+          <div className="notifications-eyebrow">
+            <Bell size={15} />
+            Operations Center
+          </div>
 
-          <p className="notifications-subtitle">
-            Stay updated on payment failures, recovery actions
-            and important account activity.
+          <h1>Notifications</h1>
+
+          <p>
+            Monitor payment failures, recovery
+            activity and customer communication
+            events in one place.
           </p>
         </div>
 
-        <div className="notification-actions">
-          <button
-            type="button"
-            className="notification-action"
-            onClick={refreshNotifications}
-            disabled={refreshing}
-          >
-            <RefreshCw
-              size={16}
-              className={refreshing ? "spin" : ""}
-            />
+        <button
+          className="notifications-refresh"
+          onClick={() =>
+            loadNotifications(true)
+          }
+          disabled={refreshing}
+        >
+          <RefreshCw
+            size={17}
+            className={
+              refreshing ? "notifications-spin" : ""
+            }
+          />
 
-            {refreshing ? "Refreshing..." : "Refresh"}
-          </button>
-
-          <button
-            type="button"
-            className="notification-action primary"
-            onClick={markAllAsRead}
-            disabled={unreadCount === 0}
-          >
-            <Check size={16} />
-
-            Mark all as read
-          </button>
-        </div>
+          {refreshing
+            ? "Refreshing..."
+            : "Refresh"}
+        </button>
       </div>
 
-      {/* =====================================================
-          SUMMARY
-          ===================================================== */}
-
-      <div className="notification-summary">
-        <div className="notification-summary-card">
-          <div className="notification-summary-label">
-            Total notifications
+      <div className="notifications-metrics">
+        <div className="notification-metric">
+          <div className="notification-metric-icon">
+            <Bell size={19} />
           </div>
 
-          <div className="notification-summary-value">
-            {notifications.length}
-          </div>
-
-          <div className="notification-summary-meta">
-            All system notifications
+          <div>
+            <span>Unread alerts</span>
+            <strong>{unreadCount}</strong>
           </div>
         </div>
 
-        <div className="notification-summary-card">
-          <div className="notification-summary-label">
-            Unread
+        <div className="notification-metric">
+          <div className="notification-metric-icon">
+            <Zap size={19} />
           </div>
 
-          <div className="notification-summary-value">
-            {unreadCount}
-          </div>
-
-          <div className="notification-summary-meta">
-            Requires your attention
+          <div>
+            <span>Recovery alerts</span>
+            <strong>{recoveryAlerts}</strong>
           </div>
         </div>
 
-        <div className="notification-summary-card">
-          <div className="notification-summary-label">
-            Payment alerts
+        <div className="notification-metric">
+          <div className="notification-metric-icon">
+            <AlertCircle size={19} />
           </div>
 
-          <div className="notification-summary-value">
-            {
-              notifications.filter(
-                (item) =>
-                  item.type === "error" ||
-                  item.type === "warning"
-              ).length
-            }
-          </div>
-
-          <div className="notification-summary-meta">
-            Failures and recovery events
+          <div>
+            <span>Payment alerts</span>
+            <strong>{paymentAlerts}</strong>
           </div>
         </div>
 
-        <div className="notification-summary-card">
-          <div className="notification-summary-label">
-            Recovery updates
+        <div className="notification-metric">
+          <div className="notification-metric-icon">
+            <ShieldCheck size={19} />
           </div>
 
-          <div className="notification-summary-value">
-            {
-              notifications.filter((item) =>
-                item.title.toLowerCase().includes("recover")
-              ).length
-            }
-          </div>
-
-          <div className="notification-summary-meta">
-            Recent recovery activity
+          <div>
+            <span>Monitoring</span>
+            <strong>Active</strong>
           </div>
         </div>
       </div>
 
-      {/* =====================================================
-          FILTERS
-          ===================================================== */}
+      <div className="notifications-toolbar">
+        <div className="notification-search">
+          <Search size={17} />
 
-      <div className="notification-filter-card">
-        <div className="notification-filters">
           <input
             type="text"
-            className="notification-search"
             placeholder="Search notifications..."
             value={search}
             onChange={(event) =>
               setSearch(event.target.value)
             }
           />
+        </div>
 
-          <select
-            className="notification-select"
-            value={filter}
-            onChange={(event) =>
-              setFilter(event.target.value)
+        <div className="notification-filters">
+          <button
+            className={
+              filter === "all"
+                ? "active"
+                : ""
+            }
+            onClick={() => setFilter("all")}
+          >
+            All
+          </button>
+
+          <button
+            className={
+              filter === "danger"
+                ? "active"
+                : ""
+            }
+            onClick={() =>
+              setFilter("danger")
             }
           >
-            <option value="all">All notifications</option>
-            <option value="unread">Unread</option>
-            <option value="read">Read</option>
-          </select>
-        </div>
-      </div>
+            Critical
+          </button>
 
-      {/* =====================================================
-          NOTIFICATION LIST
-          ===================================================== */}
-
-      {filteredNotifications.length === 0 ? (
-        <div className="notifications-empty">
-          <Bell size={34} />
-
-          <h3>
-            {notifications.length === 0
-              ? "No notifications"
-              : "No matching notifications"}
-          </h3>
-
-          <p>
-            {notifications.length === 0
-              ? "You're all caught up. New payment and recovery events will appear here."
-              : "Try changing your search or notification filter."}
-          </p>
-        </div>
-      ) : (
-        <div className="notification-list">
-          {filteredNotifications.map((notification) => (
-            <NotificationCard
-              key={notification.id}
-              notification={notification}
-              onRead={markAsRead}
-              onDelete={deleteNotification}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* =====================================================
-          GLOBAL ANIMATION
-          ===================================================== */}
-
-      <style>{`
-        .spin {
-          animation: notification-spin 0.8s linear infinite;
-        }
-
-        @keyframes notification-spin {
-          from {
-            transform: rotate(0deg);
-          }
-
-          to {
-            transform: rotate(360deg);
-          }
-        }
-      `}</style>
-    </div>
-  );
-}
-
-/* =========================================================
-   NOTIFICATION CARD
-   ========================================================= */
-
-function NotificationCard({
-  notification,
-  onRead,
-  onDelete,
-}) {
-  const Icon = getNotificationIcon(notification.type);
-
-  return (
-    <div
-      className={`notification-card ${
-        notification.status === "Unread" ? "unread" : ""
-      }`}
-    >
-      {/* ICON */}
-
-      <div
-        className={`notification-icon ${notification.type}`}
-      >
-        <Icon size={20} />
-      </div>
-
-      {/* CONTENT */}
-
-      <div className="notification-content">
-        <div className="notification-card-header">
-          <h3 className="notification-card-title">
-            {notification.title}
-          </h3>
-
-          <span className="notification-card-time">
-            {notification.time}
-          </span>
-        </div>
-
-        <p className="notification-card-message">
-          {notification.message}
-        </p>
-
-        <div className="notification-card-footer">
-          <span
-            className={`notification-status ${
-              notification.status === "Unread"
-                ? "unread"
+          <button
+            className={
+              filter === "warning"
+                ? "active"
                 : ""
-            }`}
+            }
+            onClick={() =>
+              setFilter("warning")
+            }
           >
-            {notification.status === "Unread" ? (
-              <>
-                <span>●</span>
-                Unread
-              </>
-            ) : (
-              <>
-                <CheckCircle2 size={12} />
-                Read
-              </>
-            )}
-          </span>
+            Attention
+          </button>
 
-          <div className="notification-card-actions">
-            {notification.status === "Unread" && (
-              <button
-                type="button"
-                className="notification-small-button"
-                onClick={() => onRead(notification.id)}
-              >
-                <Check size={14} />
-                Mark as read
-              </button>
-            )}
-
-            <button
-              type="button"
-              className="notification-small-button"
-              onClick={() => onDelete(notification.id)}
-            >
-              <Trash2 size={14} />
-              Delete
-            </button>
-          </div>
+          <button
+            className={
+              filter === "success"
+                ? "active"
+                : ""
+            }
+            onClick={() =>
+              setFilter("success")
+            }
+          >
+            Success
+          </button>
         </div>
+      </div>
+
+      <div className="notifications-content">
+        <div className="notifications-list-header">
+          <div>
+            <h2>Activity Feed</h2>
+            <p>
+              Live operational events generated
+              from your payment and recovery data.
+            </p>
+          </div>
+
+          <span>
+            {filteredNotifications.length} events
+          </span>
+        </div>
+
+        {loading ? (
+          <div className="notifications-empty">
+            <RefreshCw
+              size={25}
+              className="notifications-spin"
+            />
+
+            <strong>
+              Loading notifications...
+            </strong>
+
+            <p>
+              Fetching recent payment and recovery
+              activity.
+            </p>
+          </div>
+        ) : filteredNotifications.length ===
+          0 ? (
+          <div className="notifications-empty">
+            <div className="notifications-empty-icon">
+              <CheckCircle2 size={28} />
+            </div>
+
+            <strong>
+              No notifications found
+            </strong>
+
+            <p>
+              There are no events matching your
+              current filters.
+            </p>
+          </div>
+        ) : (
+          <div className="notifications-list">
+            {filteredNotifications.map(
+              (notification) => (
+                <div
+                  className={`notification-item ${notification.unread ? "unread" : ""}`}
+                  key={notification.id}
+                >
+                  <div
+                    className={`notification-type-icon ${notification.type}`}
+                  >
+                    {iconForType(
+                      notification.type
+                    )}
+                  </div>
+
+                  <div className="notification-main">
+                    <div className="notification-title-row">
+                      <div>
+                        <strong>
+                          {notification.title}
+                        </strong>
+
+                        <span className="notification-category">
+                          {notification.category}
+                        </span>
+                      </div>
+
+                      <span className="notification-time">
+                        <Clock3 size={13} />
+                        {formatDate(
+                          notification.timestamp
+                        )}
+                      </span>
+                    </div>
+
+                    <p>
+                      {notification.message}
+                    </p>
+
+                    {notification.category ===
+                      "Communication" && (
+                      <div className="notification-action">
+                        <Mail size={13} />
+                        Customer communication
+                        recorded
+                      </div>
+                    )}
+                  </div>
+
+                  {notification.unread && (
+                    <span className="notification-unread">
+                      New
+                    </span>
+                  )}
+                </div>
+              )
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
-}
-
-/* =========================================================
-   ICON SELECTION
-   ========================================================= */
-
-function getNotificationIcon(type) {
-  switch (type) {
-    case "success":
-      return CheckCircle2;
-
-    case "warning":
-      return AlertTriangle;
-
-    case "error":
-      return XCircle;
-
-    case "info":
-    default:
-      return Bell;
-  }
 }

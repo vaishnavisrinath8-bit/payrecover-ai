@@ -17,7 +17,7 @@ import {
   getPaymentsPaginated,
   getAllPayments,
 } from "../services/api";
-import "../styles/Pages.css";
+import "../Styles/Pages.css";
 
 const formatCurrency = (amount = 0) =>
   new Intl.NumberFormat("en-IN", {

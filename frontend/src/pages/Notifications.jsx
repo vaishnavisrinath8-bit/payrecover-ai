@@ -1,567 +1,647 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  AlertCircle,
   Bell,
-  CheckCircle2,
+  Check,
+  CheckCheck,
   Clock3,
   Mail,
   RefreshCw,
   Search,
-  ShieldCheck,
-  XCircle,
-  Zap,
+  Trash2,
+  AlertTriangle,
+  CircleCheck,
+  Info,
+  X,
 } from "lucide-react";
-
-import {
-  getAllRecoveries,
-  getAllPayments,
-} from "../services/api";
 
 import "./Notifications.css";
 
-function formatCurrency(value) {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(Number(value || 0));
+const STORAGE_KEY = "payrecover_notifications";
+
+const DEFAULT_NOTIFICATIONS = [
+  {
+    id: "notification-1",
+    title: "Payment recovered successfully",
+    message:
+      "A previously failed payment has been recovered successfully.",
+    type: "success",
+    category: "Recovery",
+    priority: "high",
+    createdAt: new Date(Date.now() - 12 * 60 * 1000).toISOString(),
+    read: false,
+    action: "View recovery",
+  },
+  {
+    id: "notification-2",
+    title: "Recovery action completed",
+    message:
+      "The recovery workflow completed the configured customer communication step.",
+    type: "success",
+    category: "Workflow",
+    priority: "medium",
+    createdAt: new Date(Date.now() - 42 * 60 * 1000).toISOString(),
+    read: true,
+    action: "View workflow",
+  },
+  {
+    id: "notification-3",
+    title: "Payment requires attention",
+    message:
+      "A failed payment has entered the recovery queue and is awaiting action.",
+    type: "warning",
+    category: "Payment",
+    priority: "high",
+    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    read: false,
+    action: "Open recovery",
+  },
+  {
+    id: "notification-4",
+    title: "Recovery email sent",
+    message:
+      "A recovery communication was sent to the customer successfully.",
+    type: "info",
+    category: "Communication",
+    priority: "medium",
+    createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+    read: true,
+    action: "View communication",
+  },
+  {
+    id: "notification-5",
+    title: "Recovery attempt failed",
+    message:
+      "The latest recovery attempt did not result in a successful payment.",
+    type: "danger",
+    category: "Recovery",
+    priority: "high",
+    createdAt: new Date(Date.now() - 7 * 60 * 60 * 1000).toISOString(),
+    read: false,
+    action: "Review recovery",
+  },
+  {
+    id: "notification-6",
+    title: "AI recovery recommendation updated",
+    message:
+      "The recovery decision engine generated a new recommended intervention.",
+    type: "info",
+    category: "AI",
+    priority: "medium",
+    createdAt: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
+    read: true,
+    action: "View recommendation",
+  },
+];
+
+function loadNotifications() {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+
+    if (!stored) {
+      return DEFAULT_NOTIFICATIONS;
+    }
+
+    const parsed = JSON.parse(stored);
+
+    if (!Array.isArray(parsed)) {
+      return DEFAULT_NOTIFICATIONS;
+    }
+
+    return parsed;
+  } catch (error) {
+    console.error("Unable to load notifications:", error);
+    return DEFAULT_NOTIFICATIONS;
+  }
 }
 
-function formatDate(value) {
-  if (!value) return "Recently";
+function formatTime(dateValue) {
+  if (!dateValue) {
+    return "Recently";
+  }
 
-  const date = new Date(value);
+  const date = new Date(dateValue);
 
   if (Number.isNaN(date.getTime())) {
     return "Recently";
   }
 
-  return date.toLocaleString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const diff = Date.now() - date.getTime();
+
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+
+  if (minutes < 1) {
+    return "Just now";
+  }
+
+  if (minutes < 60) {
+    return `${minutes} min ago`;
+  }
+
+  if (hours < 24) {
+    return `${hours} hr ago`;
+  }
+
+  if (days < 7) {
+    return `${days} day${days === 1 ? "" : "s"} ago`;
+  }
+
+  return date.toLocaleDateString();
 }
 
-function getArray(response) {
-  if (Array.isArray(response)) return response;
+function getNotificationIcon(type) {
+  switch (type) {
+    case "success":
+      return <CircleCheck size={17} strokeWidth={2.2} />;
 
-  if (Array.isArray(response?.data)) {
-    return response.data;
+    case "danger":
+      return <X size={17} strokeWidth={2.2} />;
+
+    case "warning":
+      return <AlertTriangle size={17} strokeWidth={2.2} />;
+
+    case "info":
+    default:
+      return <Info size={17} strokeWidth={2.2} />;
+  }
+}
+
+function getNotificationType(type) {
+  if (["success", "danger", "warning", "info"].includes(type)) {
+    return type;
   }
 
-  if (Array.isArray(response?.recoveries)) {
-    return response.recoveries;
-  }
-
-  if (Array.isArray(response?.data?.recoveries)) {
-    return response.data.recoveries;
-  }
-
-  if (Array.isArray(response?.data?.data)) {
-    return response.data.data;
-  }
-
-  return [];
+  return "info";
 }
 
 export default function Notifications() {
-  const [notifications, setNotifications] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("all");
+  const [notifications, setNotifications] = useState(() =>
+    loadNotifications()
+  );
 
-  async function loadNotifications(refresh = false) {
-    try {
-      if (refresh) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
-
-      const [recoveryResponse, paymentResponse] =
-        await Promise.all([
-          getAllRecoveries(),
-          getAllPayments(),
-        ]);
-
-      const recoveries = getArray(recoveryResponse);
-      const payments = getArray(paymentResponse);
-
-      const generated = [];
-
-      recoveries.forEach((recovery, index) => {
-        const status = String(
-          recovery?.status ||
-            recovery?.recoveryStatus ||
-            "pending"
-        ).toLowerCase();
-
-        const customer =
-          recovery?.customerName ||
-          recovery?.payment?.customerName ||
-          "Customer";
-
-        const amount = Number(
-          recovery?.amount ||
-            recovery?.payment?.amount ||
-            0
-        );
-
-        const failureReason =
-          recovery?.failureReason ||
-          recovery?.payment?.failureReason ||
-          recovery?.reason ||
-          "Payment failure";
-
-        const id =
-          recovery?._id ||
-          recovery?.id ||
-          `recovery-${index}`;
-
-        if (status === "recovered") {
-          generated.push({
-            id: `recovered-${id}`,
-            type: "success",
-            title: "Payment recovered",
-            message: `${customer} recovered ${formatCurrency(
-              recovery?.recoveredAmount || amount
-            )}.`,
-            timestamp:
-              recovery?.recoveredAt ||
-              recovery?.updatedAt,
-            unread: true,
-            category: "Recovery",
-          });
-        } else if (
-          status === "unrecoverable"
-        ) {
-          generated.push({
-            id: `unrecoverable-${id}`,
-            type: "danger",
-            title: "Recovery stopped",
-            message: `Recovery for ${customer} was marked unrecoverable.`,
-            timestamp:
-              recovery?.updatedAt,
-            unread: true,
-            category: "Recovery",
-          });
-        } else if (
-          status === "contacted"
-        ) {
-          generated.push({
-            id: `contacted-${id}`,
-            type: "info",
-            title: "Customer contacted",
-            message: `Recovery communication was initiated for ${customer}.`,
-            timestamp:
-              recovery?.lastActionAt ||
-              recovery?.lastAttemptAt ||
-              recovery?.updatedAt,
-            unread: false,
-            category: "Communication",
-          });
-        } else {
-          generated.push({
-            id: `active-${id}`,
-            type: "warning",
-            title: "Recovery requires attention",
-            message: `${customer} has ${failureReason} with ${formatCurrency(
-              amount
-            )} at risk.`,
-            timestamp:
-              recovery?.nextActionAt ||
-              recovery?.updatedAt ||
-              recovery?.createdAt,
-            unread: true,
-            category: "Recovery",
-          });
-        }
-      });
-
-      payments.forEach((payment, index) => {
-        const status = String(
-          payment?.paymentStatus || ""
-        ).toLowerCase();
-
-        if (status !== "failed") {
-          return;
-        }
-
-        const id =
-          payment?._id ||
-          payment?.id ||
-          `payment-${index}`;
-
-        generated.push({
-          id: `payment-failed-${id}`,
-          type: "danger",
-          title: "Payment failed",
-          message: `${
-            payment?.customerName || "Customer"
-          } payment of ${formatCurrency(
-            payment?.amount
-          )} failed due to ${
-            payment?.failureReason ||
-            "payment processing error"
-          }.`,
-          timestamp:
-            payment?.updatedAt ||
-            payment?.createdAt,
-          unread: true,
-          category: "Payments",
-        });
-      });
-
-      generated.sort((a, b) => {
-        const aTime = new Date(
-          a.timestamp || 0
-        ).getTime();
-
-        const bTime = new Date(
-          b.timestamp || 0
-        ).getTime();
-
-        return bTime - aTime;
-      });
-
-      setNotifications(generated);
-    } catch (error) {
-      console.error(
-        "Notifications error:",
-        error
-      );
-
-      setNotifications([]);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeFilter, setActiveFilter] = useState("all");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    loadNotifications();
-  }, []);
+    try {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(notifications)
+      );
+    } catch (error) {
+      console.error("Unable to save notifications:", error);
+    }
+  }, [notifications]);
+
+  const unreadCount = useMemo(
+    () => notifications.filter((item) => !item.read).length,
+    [notifications]
+  );
+
+  const readCount = useMemo(
+    () => notifications.filter((item) => item.read).length,
+    [notifications]
+  );
+
+  const recoveryCount = useMemo(
+    () =>
+      notifications.filter(
+        (item) =>
+          String(item.category || "").toLowerCase() ===
+            "recovery" ||
+          String(item.category || "").toLowerCase() ===
+            "workflow"
+      ).length,
+    [notifications]
+  );
 
   const filteredNotifications = useMemo(() => {
-    const query = search
-      .trim()
-      .toLowerCase();
+    const query = searchQuery.trim().toLowerCase();
 
-    return notifications.filter(
-      (notification) => {
-        const matchesSearch =
-          !query ||
-          notification.title
-            .toLowerCase()
-            .includes(query) ||
-          notification.message
-            .toLowerCase()
-            .includes(query) ||
-          notification.category
-            .toLowerCase()
-            .includes(query);
+    return notifications.filter((notification) => {
+      const matchesSearch =
+        !query ||
+        String(notification.title || "")
+          .toLowerCase()
+          .includes(query) ||
+        String(notification.message || "")
+          .toLowerCase()
+          .includes(query) ||
+        String(notification.category || "")
+          .toLowerCase()
+          .includes(query);
 
-        const matchesFilter =
-          filter === "all" ||
-          notification.type === filter;
+      let matchesFilter = true;
 
-        return (
-          matchesSearch &&
-          matchesFilter
-        );
+      if (activeFilter === "unread") {
+        matchesFilter = !notification.read;
       }
+
+      if (activeFilter === "read") {
+        matchesFilter = notification.read;
+      }
+
+      if (activeFilter === "recovery") {
+        matchesFilter =
+          String(notification.category || "")
+            .toLowerCase()
+            .includes("recovery") ||
+          String(notification.category || "")
+            .toLowerCase()
+            .includes("workflow");
+      }
+
+      return matchesSearch && matchesFilter;
+    });
+  }, [notifications, searchQuery, activeFilter]);
+
+  const markAsRead = (id) => {
+    setNotifications((current) =>
+      current.map((notification) =>
+        notification.id === id
+          ? {
+              ...notification,
+              read: true,
+            }
+          : notification
+      )
     );
-  }, [notifications, search, filter]);
+  };
 
-  const unreadCount = notifications.filter(
-    (item) => item.unread
-  ).length;
+  const toggleRead = (id) => {
+    setNotifications((current) =>
+      current.map((notification) =>
+        notification.id === id
+          ? {
+              ...notification,
+              read: !notification.read,
+            }
+          : notification
+      )
+    );
+  };
 
-  const recoveryAlerts = notifications.filter(
-    (item) =>
-      item.category === "Recovery"
-  ).length;
+  const markAllAsRead = () => {
+    setNotifications((current) =>
+      current.map((notification) => ({
+        ...notification,
+        read: true,
+      }))
+    );
+  };
 
-  const paymentAlerts = notifications.filter(
-    (item) =>
-      item.category === "Payments"
-  ).length;
+  const deleteNotification = (id) => {
+    setNotifications((current) =>
+      current.filter((notification) => notification.id !== id)
+    );
+  };
 
-  function iconForType(type) {
-    if (type === "success") {
-      return <CheckCircle2 size={19} />;
+  const clearAll = () => {
+    const confirmed = window.confirm(
+      "Clear all notifications?"
+    );
+
+    if (!confirmed) {
+      return;
     }
 
-    if (type === "danger") {
-      return <XCircle size={19} />;
-    }
+    setNotifications([]);
+  };
 
-    if (type === "warning") {
-      return <AlertCircle size={19} />;
-    }
+  const refreshNotifications = () => {
+    setLoading(true);
 
-    return <Bell size={19} />;
-  }
+    window.setTimeout(() => {
+      setNotifications((current) => [...current]);
+      setLoading(false);
+    }, 500);
+  };
+
+  const resetDemoNotifications = () => {
+    setNotifications(DEFAULT_NOTIFICATIONS);
+    setSearchQuery("");
+    setActiveFilter("all");
+  };
 
   return (
     <div className="notifications-page">
+      {/* HEADER */}
       <div className="notifications-header">
         <div>
           <div className="notifications-eyebrow">
-            <Bell size={15} />
-            Operations Center
+            <Bell size={13} />
+            Notification Center
           </div>
 
           <h1>Notifications</h1>
 
           <p>
-            Monitor payment failures, recovery
-            activity and customer communication
-            events in one place.
+            Monitor payment events, recovery activity, AI
+            decisions, and customer communication from one
+            place.
           </p>
         </div>
 
         <button
+          type="button"
           className="notifications-refresh"
-          onClick={() =>
-            loadNotifications(true)
-          }
-          disabled={refreshing}
+          onClick={refreshNotifications}
+          disabled={loading}
         >
           <RefreshCw
-            size={17}
-            className={
-              refreshing ? "notifications-spin" : ""
-            }
+            size={14}
+            className={loading ? "notifications-spin" : ""}
           />
 
-          {refreshing
-            ? "Refreshing..."
-            : "Refresh"}
+          {loading ? "Refreshing..." : "Refresh"}
         </button>
       </div>
 
+      {/* METRICS */}
       <div className="notifications-metrics">
         <div className="notification-metric">
           <div className="notification-metric-icon">
-            <Bell size={19} />
+            <Bell size={18} />
           </div>
 
           <div>
-            <span>Unread alerts</span>
+            <span>Total notifications</span>
+            <strong>{notifications.length}</strong>
+          </div>
+        </div>
+
+        <div className="notification-metric">
+          <div className="notification-metric-icon">
+            <Mail size={18} />
+          </div>
+
+          <div>
+            <span>Unread</span>
             <strong>{unreadCount}</strong>
           </div>
         </div>
 
         <div className="notification-metric">
           <div className="notification-metric-icon">
-            <Zap size={19} />
+            <RefreshCw size={18} />
           </div>
 
           <div>
-            <span>Recovery alerts</span>
-            <strong>{recoveryAlerts}</strong>
+            <span>Recovery activity</span>
+            <strong>{recoveryCount}</strong>
           </div>
         </div>
 
         <div className="notification-metric">
           <div className="notification-metric-icon">
-            <AlertCircle size={19} />
+            <CheckCheck size={18} />
           </div>
 
           <div>
-            <span>Payment alerts</span>
-            <strong>{paymentAlerts}</strong>
-          </div>
-        </div>
-
-        <div className="notification-metric">
-          <div className="notification-metric-icon">
-            <ShieldCheck size={19} />
-          </div>
-
-          <div>
-            <span>Monitoring</span>
-            <strong>Active</strong>
+            <span>Read</span>
+            <strong>{readCount}</strong>
           </div>
         </div>
       </div>
 
+      {/* TOOLBAR */}
       <div className="notifications-toolbar">
-        <div className="notification-search">
-          <Search size={17} />
+        <label className="notification-search">
+          <Search size={15} />
 
           <input
             type="text"
-            placeholder="Search notifications..."
-            value={search}
+            value={searchQuery}
             onChange={(event) =>
-              setSearch(event.target.value)
+              setSearchQuery(event.target.value)
             }
+            placeholder="Search notifications..."
+            aria-label="Search notifications"
+            autoComplete="off"
+            spellCheck={false}
           />
-        </div>
+        </label>
 
         <div className="notification-filters">
           <button
+            type="button"
             className={
-              filter === "all"
-                ? "active"
-                : ""
+              activeFilter === "all" ? "active" : ""
             }
-            onClick={() => setFilter("all")}
+            onClick={() => setActiveFilter("all")}
           >
             All
           </button>
 
           <button
+            type="button"
             className={
-              filter === "danger"
-                ? "active"
-                : ""
+              activeFilter === "unread" ? "active" : ""
             }
-            onClick={() =>
-              setFilter("danger")
-            }
+            onClick={() => setActiveFilter("unread")}
           >
-            Critical
+            Unread
           </button>
 
           <button
+            type="button"
             className={
-              filter === "warning"
-                ? "active"
-                : ""
+              activeFilter === "read" ? "active" : ""
             }
-            onClick={() =>
-              setFilter("warning")
-            }
+            onClick={() => setActiveFilter("read")}
           >
-            Attention
+            Read
           </button>
 
           <button
+            type="button"
             className={
-              filter === "success"
-                ? "active"
-                : ""
+              activeFilter === "recovery" ? "active" : ""
             }
-            onClick={() =>
-              setFilter("success")
-            }
+            onClick={() => setActiveFilter("recovery")}
           >
-            Success
+            Recovery
           </button>
         </div>
       </div>
 
+      {/* CONTENT */}
       <div className="notifications-content">
         <div className="notifications-list-header">
           <div>
-            <h2>Activity Feed</h2>
+            <h2>Recent activity</h2>
+
             <p>
-              Live operational events generated
-              from your payment and recovery data.
+              Payment and recovery events from your account.
             </p>
           </div>
 
           <span>
-            {filteredNotifications.length} events
+            {filteredNotifications.length}{" "}
+            {filteredNotifications.length === 1
+              ? "notification"
+              : "notifications"}
           </span>
         </div>
 
-        {loading ? (
-          <div className="notifications-empty">
-            <RefreshCw
-              size={25}
-              className="notifications-spin"
-            />
-
-            <strong>
-              Loading notifications...
-            </strong>
-
-            <p>
-              Fetching recent payment and recovery
-              activity.
-            </p>
-          </div>
-        ) : filteredNotifications.length ===
-          0 ? (
+        {filteredNotifications.length === 0 ? (
           <div className="notifications-empty">
             <div className="notifications-empty-icon">
-              <CheckCircle2 size={28} />
+              <Bell size={24} />
             </div>
 
-            <strong>
-              No notifications found
-            </strong>
+            <strong>No notifications found</strong>
 
             <p>
-              There are no events matching your
-              current filters.
+              {searchQuery
+                ? "Try a different search term or clear your search."
+                : "There are no notifications matching the selected filter."}
             </p>
+
+            {(searchQuery || activeFilter !== "all") && (
+              <button
+                type="button"
+                className="notification-action"
+                onClick={() => {
+                  setSearchQuery("");
+                  setActiveFilter("all");
+                }}
+              >
+                Clear filters
+              </button>
+            )}
+
+            {notifications.length === 0 && (
+              <button
+                type="button"
+                className="notification-action"
+                onClick={resetDemoNotifications}
+              >
+                Restore demo notifications
+              </button>
+            )}
           </div>
         ) : (
-          <div className="notifications-list">
-            {filteredNotifications.map(
-              (notification) => (
+          filteredNotifications.map((notification) => {
+            const type = getNotificationType(
+              notification.type
+            );
+
+            return (
+              <div
+                className={`notification-item ${
+                  !notification.read ? "unread" : ""
+                }`}
+                key={notification.id}
+              >
                 <div
-                  className={`notification-item ${notification.unread ? "unread" : ""}`}
-                  key={notification.id}
+                  className={`notification-type-icon ${type}`}
                 >
-                  <div
-                    className={`notification-type-icon ${notification.type}`}
-                  >
-                    {iconForType(
-                      notification.type
-                    )}
-                  </div>
+                  {getNotificationIcon(type)}
+                </div>
 
-                  <div className="notification-main">
-                    <div className="notification-title-row">
-                      <div>
-                        <strong>
-                          {notification.title}
-                        </strong>
+                <div className="notification-main">
+                  <div className="notification-title-row">
+                    <div>
+                      <strong>
+                        {notification.title}
+                      </strong>
 
-                        <span className="notification-category">
-                          {notification.category}
-                        </span>
-                      </div>
-
-                      <span className="notification-time">
-                        <Clock3 size={13} />
-                        {formatDate(
-                          notification.timestamp
-                        )}
+                      <span className="notification-category">
+                        {notification.category ||
+                          "General"}
                       </span>
+
+                      {!notification.read && (
+                        <span className="notification-unread">
+                          Unread
+                        </span>
+                      )}
                     </div>
 
-                    <p>
-                      {notification.message}
-                    </p>
-
-                    {notification.category ===
-                      "Communication" && (
-                      <div className="notification-action">
-                        <Mail size={13} />
-                        Customer communication
-                        recorded
-                      </div>
-                    )}
+                    <span className="notification-time">
+                      <Clock3 size={11} />
+                      {formatTime(
+                        notification.createdAt
+                      )}
+                    </span>
                   </div>
 
-                  {notification.unread && (
-                    <span className="notification-unread">
-                      New
-                    </span>
+                  <p>{notification.message}</p>
+
+                  <button
+                    type="button"
+                    className="notification-action"
+                    onClick={() =>
+                      toggleRead(notification.id)
+                    }
+                  >
+                    {notification.read ? (
+                      <>
+                        <Mail size={11} />
+                        Mark as unread
+                      </>
+                    ) : (
+                      <>
+                        <Check size={11} />
+                        Mark as read
+                      </>
+                    )}
+                  </button>
+
+                  {notification.action && (
+                    <button
+                      type="button"
+                      className="notification-action"
+                      onClick={() =>
+                        markAsRead(notification.id)
+                      }
+                    >
+                      <Info size={11} />
+                      {notification.action}
+                    </button>
                   )}
+
+                  <button
+                    type="button"
+                    className="notification-action"
+                    onClick={() =>
+                      deleteNotification(
+                        notification.id
+                      )
+                    }
+                  >
+                    <Trash2 size={11} />
+                    Delete
+                  </button>
                 </div>
-              )
-            )}
+              </div>
+            );
+          })
+        )}
+
+        {notifications.length > 0 && (
+          <div className="notifications-footer">
+            <button
+              type="button"
+              className="notification-action"
+              onClick={markAllAsRead}
+              disabled={unreadCount === 0}
+            >
+              <CheckCheck size={12} />
+              Mark all as read
+            </button>
+
+            <button
+              type="button"
+              className="notification-action notification-danger-action"
+              onClick={clearAll}
+            >
+              <Trash2 size={12} />
+              Clear all
+            </button>
           </div>
         )}
       </div>

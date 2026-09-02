@@ -12,6 +12,10 @@ const api = axios.create({
   timeout: 15000,
 });
 
+/* =========================================================
+   API ERROR INTERCEPTOR
+========================================================= */
+
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -30,6 +34,19 @@ api.interceptors.response.use(
    PAYMENTS
 ========================================================= */
 
+/**
+ * Get all payments.
+ *
+ * Backend:
+ * GET /api/payments
+ *
+ * Optional params:
+ * - page
+ * - limit
+ * - status
+ * - method
+ * - search
+ */
 export const getAllPayments = async (params = {}) => {
   const response = await api.get("/payments", {
     params,
@@ -38,6 +55,9 @@ export const getAllPayments = async (params = {}) => {
   return response.data;
 };
 
+/**
+ * Get paginated payments.
+ */
 export const getPaymentsPaginated = async (
   page = 1,
   limit = 50,
@@ -54,6 +74,9 @@ export const getPaymentsPaginated = async (
   return response.data;
 };
 
+/**
+ * Search payments.
+ */
 export const searchPayments = async (query) => {
   if (!query || !query.trim()) {
     return getAllPayments();
@@ -68,12 +91,24 @@ export const searchPayments = async (query) => {
   return response.data;
 };
 
+/**
+ * Get payment statistics.
+ *
+ * Backend:
+ * GET /api/payments/stats
+ */
 export const getPaymentStats = async () => {
   const response = await api.get("/payments/stats");
 
   return response.data;
 };
 
+/**
+ * Get recent payments.
+ *
+ * Backend:
+ * GET /api/payments/recent
+ */
 export const getRecentPayments = async (limit = 10) => {
   const response = await api.get("/payments/recent", {
     params: {
@@ -84,28 +119,76 @@ export const getRecentPayments = async (limit = 10) => {
   return response.data;
 };
 
+/**
+ * =========================================================
+ * GET PAYMENT BY DATABASE ID
+ * =========================================================
+ *
+ * IMPORTANT:
+ * The backend does NOT expose:
+ *
+ * GET /api/payments/:id
+ *
+ * Therefore we use the existing:
+ *
+ * GET /api/payments
+ *
+ * endpoint and locate the requested MongoDB payment record.
+ */
 export const getPaymentById = async (id) => {
   if (!id) {
     throw new Error("Payment ID is required.");
   }
 
-  const response = await api.get(`/payments/${id}`);
+  const response = await api.get("/payments");
 
-  return response.data;
+  const payments = response.data?.data || [];
+
+  const payment = payments.find(
+    (item) =>
+      String(item?._id) === String(id) ||
+      String(item?.id) === String(id) ||
+      String(item?.razorpayPaymentId) === String(id) ||
+      String(item?.razorpayOrderId) === String(id)
+  );
+
+  if (!payment) {
+    throw new Error("Payment not found.");
+  }
+
+  return {
+    success: true,
+    data: payment,
+  };
 };
 
+/**
+ * =========================================================
+ * GET RAZORPAY PAYMENT STATUS
+ * =========================================================
+ *
+ * Backend:
+ * GET /api/payments/status/:paymentId
+ *
+ * IMPORTANT:
+ * This endpoint expects a Razorpay payment ID.
+ */
 export const getPaymentStatus = async (id) => {
   if (!id) {
     throw new Error("Payment ID is required.");
   }
 
-  const response = await api.get(`/payments/${id}`);
+  const response = await api.get(
+    `/payments/status/${id}`
+  );
 
   const data = response.data;
 
   return {
     ...data,
+
     status:
+      data?.payment?.status ??
       data?.data?.paymentStatus ??
       data?.paymentStatus ??
       data?.data?.status ??
@@ -114,6 +197,9 @@ export const getPaymentStatus = async (id) => {
   };
 };
 
+/**
+ * Create Razorpay payment order.
+ */
 export const createPaymentOrder = async (data) => {
   const response = await api.post(
     "/payments/create-order",
@@ -123,6 +209,9 @@ export const createPaymentOrder = async (data) => {
   return response.data;
 };
 
+/**
+ * Verify Razorpay payment.
+ */
 export const verifyPayment = async (data) => {
   const response = await api.post(
     "/payments/verify",
@@ -132,12 +221,19 @@ export const verifyPayment = async (data) => {
   return response.data;
 };
 
-
 /* =========================================================
    RECOVERIES
 ========================================================= */
 
-export const getAllRecoveries = async (params = {}) => {
+/**
+ * Get all recoveries.
+ *
+ * Backend:
+ * GET /api/recovery
+ */
+export const getAllRecoveries = async (
+  params = {}
+) => {
   const response = await api.get("/recovery", {
     params,
   });
@@ -145,10 +241,18 @@ export const getAllRecoveries = async (params = {}) => {
   return response.data;
 };
 
-export const getRecoveries = async (params = {}) => {
+/**
+ * Alias used by different frontend pages.
+ */
+export const getRecoveries = async (
+  params = {}
+) => {
   return getAllRecoveries(params);
 };
 
+/**
+ * Get paginated recoveries.
+ */
 export const getRecoveriesPaginated = async (
   page = 1,
   limit = 50,
@@ -165,6 +269,9 @@ export const getRecoveriesPaginated = async (
   return response.data;
 };
 
+/**
+ * Search recoveries.
+ */
 export const searchRecoveries = async (query) => {
   if (!query || !query.trim()) {
     return getAllRecoveries();
@@ -179,6 +286,12 @@ export const searchRecoveries = async (query) => {
   return response.data;
 };
 
+/**
+ * Get recovery by ID.
+ *
+ * Backend:
+ * GET /api/recovery/:id
+ */
 export const getRecoveryById = async (id) => {
   if (!id) {
     throw new Error("Recovery ID is required.");
@@ -191,6 +304,12 @@ export const getRecoveryById = async (id) => {
   return response.data;
 };
 
+/**
+ * Get recovery queue.
+ *
+ * Backend:
+ * GET /api/recovery/queue
+ */
 export const getRecoveryQueue = async (
   params = {}
 ) => {
@@ -204,6 +323,12 @@ export const getRecoveryQueue = async (
   return response.data;
 };
 
+/**
+ * Get recovery analytics.
+ *
+ * Backend:
+ * GET /api/recovery/analytics
+ */
 export const getRecoveryAnalytics = async () => {
   const response = await api.get(
     "/recovery/analytics"
@@ -212,11 +337,16 @@ export const getRecoveryAnalytics = async () => {
   return response.data;
 };
 
-
 /* =========================================================
    RECOVERY WORKFLOW
 ========================================================= */
 
+/**
+ * Create recovery.
+ *
+ * Backend:
+ * POST /api/recovery/create
+ */
 export const createRecovery = async (data) => {
   if (!data?.paymentId) {
     throw new Error("paymentId is required.");
@@ -230,7 +360,12 @@ export const createRecovery = async (data) => {
   return response.data;
 };
 
-
+/**
+ * Send recovery.
+ *
+ * Backend:
+ * POST /api/recovery/send
+ */
 export const sendRecovery = async (data) => {
   if (!data?.recoveryId) {
     throw new Error("recoveryId is required.");
@@ -244,7 +379,9 @@ export const sendRecovery = async (data) => {
   return response.data;
 };
 
-
+/**
+ * Retry payment / initiate recovery.
+ */
 export const retryPayment = async (paymentId) => {
   if (!paymentId) {
     throw new Error("Payment ID is required.");
@@ -256,7 +393,12 @@ export const retryPayment = async (paymentId) => {
   });
 };
 
-
+/**
+ * Mark recovery as recovered.
+ *
+ * Backend:
+ * POST /api/recovery/:id/recovered
+ */
 export const markRecoveryRecovered = async (
   recoveryId,
   recoveredAmount
@@ -275,7 +417,9 @@ export const markRecoveryRecovered = async (
   return response.data;
 };
 
-
+/**
+ * Alias used by frontend pages.
+ */
 export const markAsRecovered = async (
   recoveryId,
   recoveredAmount
@@ -286,7 +430,12 @@ export const markAsRecovered = async (
   );
 };
 
-
+/**
+ * Mark recovery as unrecoverable.
+ *
+ * Backend:
+ * POST /api/recovery/:id/unrecoverable
+ */
 export const markRecoveryUnrecoverable = async (
   recoveryId,
   reason
@@ -307,7 +456,9 @@ export const markRecoveryUnrecoverable = async (
   return response.data;
 };
 
-
+/**
+ * Alias used by frontend pages.
+ */
 export const markAsUnrecoverable = async (
   recoveryId,
   reason
@@ -318,11 +469,18 @@ export const markAsUnrecoverable = async (
   );
 };
 
-
 /* =========================================================
-   LOCAL ACCOUNT / SETTINGS
+   NOTIFICATIONS
 ========================================================= */
 
+/**
+ * Get notifications.
+ *
+ * Uses existing backend endpoint when available.
+ *
+ * If the endpoint is unavailable, return an empty
+ * collection instead of breaking the application.
+ */
 export const getNotifications = async () => {
   try {
     const response = await api.get(
@@ -330,7 +488,11 @@ export const getNotifications = async () => {
     );
 
     return response.data;
-  } catch {
+  } catch (error) {
+    console.warn(
+      "Notifications API unavailable. Using empty notification state."
+    );
+
     return {
       success: true,
       data: [],
@@ -338,7 +500,16 @@ export const getNotifications = async () => {
   }
 };
 
+/* =========================================================
+   ACCOUNT
+========================================================= */
 
+/**
+ * Account information.
+ *
+ * The Account page also maintains local state/localStorage
+ * where appropriate.
+ */
 export const getAccount = async () => {
   try {
     const response = await api.get(
@@ -346,7 +517,11 @@ export const getAccount = async () => {
     );
 
     return response.data;
-  } catch {
+  } catch (error) {
+    console.warn(
+      "Account API unavailable. Using local account state."
+    );
+
     return {
       success: true,
       data: null,
@@ -354,7 +529,16 @@ export const getAccount = async () => {
   }
 };
 
+/* =========================================================
+   SETTINGS
+========================================================= */
 
+/**
+ * Settings.
+ *
+ * The Settings page can maintain settings locally while
+ * still supporting the backend endpoint when available.
+ */
 export const getSettings = async () => {
   try {
     const response = await api.get(
@@ -362,7 +546,11 @@ export const getSettings = async () => {
     );
 
     return response.data;
-  } catch {
+  } catch (error) {
+    console.warn(
+      "Settings API unavailable. Using local settings state."
+    );
+
     return {
       success: true,
       data: null,
@@ -370,7 +558,16 @@ export const getSettings = async () => {
   }
 };
 
+/* =========================================================
+   HEALTH CHECK
+========================================================= */
 
+/**
+ * Backend health check.
+ *
+ * Backend:
+ * GET /api/health
+ */
 export const checkHealth = async () => {
   const response = await api.get(
     "/health"
@@ -379,5 +576,8 @@ export const checkHealth = async () => {
   return response.data;
 };
 
+/* =========================================================
+   DEFAULT EXPORT
+========================================================= */
 
 export default api;

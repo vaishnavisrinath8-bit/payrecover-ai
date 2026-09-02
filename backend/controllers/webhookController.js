@@ -1,6 +1,6 @@
 const crypto = require("crypto");
 
-const Payment = require("../models/Payment");
+const Payment = require("../models/payment");
 const Recovery = require("../models/Recovery");
 
 const {

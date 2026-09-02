@@ -7,7 +7,7 @@ const express = require("express");
 const router = express.Router();
 
 const Recovery = require("../models/Recovery");
-const Payment = require("../models/Payment");
+const Payment = require("../models/payment");
 
 const {
   analyzeFailure,

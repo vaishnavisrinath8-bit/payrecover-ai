@@ -5,7 +5,7 @@ require("dotenv").config();
 
 const connectDB = require("./config/db");
 
-const Payment = require("./models/Payment");
+const Payment = require("./models/payment");
 const Recovery = require("./models/Recovery");
 
 const {

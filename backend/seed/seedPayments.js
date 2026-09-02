@@ -17,7 +17,7 @@ dns.setServers([
 
 const mongoose = require("mongoose");
 
-const Payment = require("../models/Payment");
+const Payment = require("../models/payment");
 
 // ============================================================
 // Customer Dataset

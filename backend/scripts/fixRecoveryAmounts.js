@@ -9,7 +9,7 @@ const mongoose = require("mongoose");
 
 const connectDB = require("../config/db");
 const Recovery = require("../models/Recovery");
-const Payment = require("../models/Payment");
+const Payment = require("../models/payment");
 
 const fixRecoveryAmounts = async () => {
   try {

@@ -1,35 +1,64 @@
+# =========================================================
+# PayRecover AI - Git Ignore
+# =========================================================
+
 # Dependencies
 node_modules/
 
 # Environment variables / secrets
 .env
+.env.*
+!.env.example
 .env.local
 .env.development
 .env.production
 .env.*.local
 
-# Build output
+# Frontend build output
+frontend/dist/
+frontend/build/
+
+# Backend build/output
+backend/dist/
+backend/build/
+
+# General build output
 dist/
 build/
 
 # Logs
 *.log
 logs/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
 
-# Coverage
+# Test / coverage output
 coverage/
+.nyc_output/
 
 # Temporary files
 .tmp/
 .temp/
+tmp/
+temp/
 
-# OS files
+# OS generated files
 .DS_Store
 Thumbs.db
+Desktop.ini
 
-# IDE settings
+# IDE / editor settings
 .vscode/
 .idea/
+*.swp
+*.swo
 
 # Local caches
 .cache/
+.parcel-cache/
+.vite/
+
+# Runtime/local data
+*.pid
+*.seed

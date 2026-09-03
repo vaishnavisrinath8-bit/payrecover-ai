@@ -1,245 +1,341 @@
 # PayRecover AI
 
-**AI-Powered Payment Recovery & Revenue Recovery Platform**
+### Intelligent Payment Recovery & Revenue Protection Platform
 
-PayRecover AI is a full-stack intelligent payment recovery platform designed to help businesses identify failed payments, understand why revenue is at risk, prioritize recovery opportunities, and execute compliant recovery actions.
+PayRecover AI is an AI-powered payment recovery platform designed to help businesses identify failed payments, understand why payments fail, prioritize revenue at risk, and execute intelligent recovery workflows.
 
-The platform provides a centralized SaaS-style dashboard for monitoring payments, managing recovery operations, analyzing recovery performance, generating recovery communications, and tracking recovered revenue.
+The platform provides a centralized SaaS-style dashboard for monitoring payment failures, managing recovery actions, tracking recovered revenue, and analyzing recovery performance.
 
 Built for **Razorpay Buildathon — Track 03: AI Revenue Recovery**.
 
 ---
 
-## Problem Statement
+## 🚀 Project Overview
 
-Failed payments can create significant revenue leakage for businesses. Manually identifying failed transactions, understanding failure reasons, deciding which customers to contact, and tracking recovery attempts can be time-consuming and inconsistent.
+Failed payments can result in significant revenue leakage for businesses.
 
-Businesses need a system that can:
-
-* Detect revenue at risk
-* Analyze payment failures
-* Prioritize recovery opportunities
-* Recommend appropriate recovery actions
-* Generate customer communication
-* Apply compliance and safety rules
-* Track recovery attempts
-* Measure recovered revenue
-* Maintain an audit trail
-
-PayRecover AI addresses these challenges through an intelligent, structured recovery workflow.
-
----
-
-## Solution
-
-PayRecover AI transforms failed payment events into actionable recovery opportunities.
+PayRecover AI addresses this problem by creating an intelligent recovery workflow:
 
 ```text
-Failed Payment
+Payment Failure
       ↓
-AI Failure Diagnosis
+Failure Analysis
       ↓
-Risk & Priority Scoring
+Revenue Risk Assessment
       ↓
-Recovery Decision
+Recovery Recommendation
       ↓
-Compliance & Safety Check
+Recovery Workflow
       ↓
-Message Generation
+Customer Communication
       ↓
-Recovery Action
+Retry / Recovery
       ↓
-Recovery Outcome
-      ↓
-Recovered Revenue
+Recovery Tracking
       ↓
 Analytics & Audit Trail
 ```
 
-The platform combines payment monitoring, recovery intelligence, customer communication, compliance controls, and analytics into one recovery command center.
+Instead of treating every failed payment the same way, PayRecover AI uses payment information, failure reasons, recovery history, priority, and configurable recovery rules to determine an appropriate recovery action.
 
 ---
 
-## Core Recovery Workflow
+## 🎯 Problem Statement
 
-```text
-DETECT
-Identify failed payments and revenue at risk
-        ↓
-DIAGNOSE
-Understand the payment failure reason
-        ↓
-DECIDE
-Determine the most suitable recovery strategy
-        ↓
-PROTECT
-Apply compliance, contact, attempt, and approval rules
-        ↓
-ENGAGE
-Generate a contextual recovery message
-        ↓
-EXECUTE
-Perform an allowed recovery action
-        ↓
-MEASURE
-Track recovery status and recovered revenue
-        ↓
-AUDIT
-Record recovery activity and decisions
-```
+Payment failures are a major source of avoidable revenue loss.
+
+A typical payment failure can require businesses to:
+
+* Identify the failed transaction
+* Understand the failure reason
+* Determine whether the payment is recoverable
+* Prioritize high-value recovery opportunities
+* Contact the customer
+* Retry the payment
+* Track the recovery process
+* Measure recovered revenue
+
+Managing these processes manually becomes difficult as transaction volume increases.
+
+PayRecover AI provides a centralized system for automating and monitoring this workflow.
 
 ---
 
-## Key Features
+## 💡 Solution
 
-### Payment Intelligence
+PayRecover AI combines payment monitoring, recovery intelligence, automated communication, and analytics into a single platform.
 
-* Real-time payment monitoring
-* Payment status tracking
-* Failed payment detection
-* Failure reason classification
-* Payment method analysis
-* Retry count tracking
-* Customer and transaction details
-* Payment search and filtering
-* Payment details view
-* Paginated payment management
+The platform can:
 
-### AI Recovery Intelligence
+* Detect failed payments
+* Analyze payment failure information
+* Assign recovery priority
+* Generate recovery recommendations
+* Create recovery workflows
+* Generate customer-facing recovery messages
+* Send recovery communication through email
+* Track recovery attempts
+* Record successful recoveries
+* Mark unrecoverable cases
+* Maintain recovery history and audit information
+* Provide recovery analytics
 
-* AI-assisted failure diagnosis
-* Recovery opportunity identification
-* Recovery priority scoring
-* Recovery probability
-* Recommended recovery action
-* Failure-specific recovery reasoning
-* Signal-based decision making
-* Recovery candidate scanning
-* AI recovery decision center
+---
 
-### Recovery Command Center
+# ✨ Key Features
 
+## 📊 Revenue Recovery Dashboard
+
+The dashboard provides an overview of the payment and recovery ecosystem.
+
+It includes information such as:
+
+* Total payments
+* Payment performance
+* Failed payments
+* Recovery activity
 * Recovery queue
-* Active recovery tracking
-* Recovery status management
-* Recovery priority management
-* Recovery attempts
-* Recovery actions
-* Mark recovered workflow
-* Mark unrecoverable workflow
-* Recovery outcome tracking
+* Recent payment activity
+* Revenue-related metrics
 
-### AI Recovery Message Center
+The dashboard is connected to the backend API and displays live application data.
 
-Generate contextual recovery communication for customers using:
+---
 
-* Email
-* SMS
-* Payment retry
+## 💳 Payment Management
 
-Supported message styles include:
+The Payments section provides a centralized view of transactions.
 
-* English
-* Hindi
-* Hinglish
+Payment information includes:
 
-The message workflow includes:
+* Customer name
+* Customer email
+* Payment amount
+* Currency
+* Payment status
+* Payment method
+* Failure reason
+* Failure code
+* Retry count
+* Recovery status
+* Recovery priority
+* AI recommendation
+* Creation/update timestamps
 
-* AI-assisted message generation
-* Regenerate message
-* Copy message
-* Compliance checks
-* Message quality checks
-* Recovery context
+Payments can be inspected individually to understand their recovery context.
 
-### Compliance & Safety
+---
 
-PayRecover AI includes bounded recovery controls designed to prevent uncontrolled customer outreach.
+## 🔄 Intelligent Recovery Workflow
 
-Controls include:
+PayRecover AI converts failed payments into actionable recovery cases.
 
-* Contact permission
-* Maximum recovery attempts
-* Recovery expiry
-* Approval requirements
-* Automated recovery controls
-* Allowed communication channels
-* Recovery stopping conditions
-* Escalation controls
-* Audit logging
-
-### AI Recovery Agent
-
-The platform includes an end-to-end AI-assisted recovery orchestration flow:
+A recovery can move through stages such as:
 
 ```text
-Scan Candidates
-      ↓
-Diagnose Failure
-      ↓
-Calculate Recovery Priority
-      ↓
-Select Recommended Action
-      ↓
-Check Compliance
-      ↓
-Generate Recovery Message
-      ↓
-Execute Permitted Action
-      ↓
-Track Outcome
-      ↓
-Record Audit Event
+Created
+   ↓
+Pending
+   ↓
+Email Sent
+   ↓
+Recovered
 ```
 
-The recovery agent respects configured safety settings and approval requirements before executing state-changing actions.
+Cases can also become:
+
+```text
+Failed / Unrecoverable / Stopped
+```
+
+The recovery system maintains information about attempts, recommended actions, recovery status, and timing.
+
+---
+
+## 🤖 AI-Powered Recovery Intelligence
+
+The platform contains an AI recovery layer designed to help determine the appropriate recovery strategy.
+
+The system considers information such as:
+
+* Payment failure reason
+* Failure code
+* Payment value
+* Previous recovery attempts
+* Recovery priority
+* Customer information
+* Recovery history
+* Compliance rules
+
+Based on this information, the platform can generate:
+
+* Recovery recommendations
+* Recovery priority
+* Recovery probability
+* Customer recovery messages
+* Suggested recovery actions
+
+The objective is to move from simple payment-failure detection toward **intelligent revenue recovery decisions**.
+
+---
+
+## 📧 Automated Customer Communication
+
+PayRecover AI integrates customer communication into the recovery workflow.
+
+Recovery messages can be generated based on the payment and recovery context and sent through the configured email service.
+
+This enables a workflow such as:
+
+```text
+Failed Payment
+      ↓
+Failure Analysis
+      ↓
+Recovery Decision
+      ↓
+Message Generation
+      ↓
+Email Communication
+      ↓
+Customer Payment Retry
+```
+
+---
+
+## 📈 Recovery Analytics
+
+The platform provides recovery analytics to help understand recovery performance.
+
+Analytics can be used to evaluate:
+
+* Recovery volume
+* Recovery outcomes
+* Recovered revenue
+* Recovery attempts
+* Recovery performance
+* Recovery trends
+
+This allows businesses to measure the financial impact of their recovery strategy rather than only monitoring failed transactions.
+
+---
+
+## ⚙️ Recovery Rules & Compliance
+
+The recovery workflow includes bounded recovery logic and compliance-oriented controls.
+
+The system can track concepts such as:
+
+* Maximum recovery attempts
+* Next permitted action
+* Recovery expiry
+* Contact permission
+* Recovery stopping conditions
+* Escalation level
+* Audit events
+
+This helps prevent uncontrolled retry or communication behavior.
+
+---
+
+## 📝 Audit Trail
+
+Recovery activity can be recorded through audit information associated with recovery cases.
+
+This provides visibility into:
+
+* Recovery actions
+* Recovery status changes
+* Attempts
+* Communication activity
+* System decisions
+* Recovery outcomes
+
+An audit trail improves transparency and makes the recovery workflow easier to investigate.
+
+---
+
+# 🖥️ Application Sections
+
+The frontend is structured as a SaaS-style dashboard with dedicated application areas.
+
+### Dashboard
+
+Provides an overview of payment and recovery performance.
+
+### Payments
+
+Provides transaction-level payment information and failure details.
+
+### Recoveries
+
+Provides recovery cases, recovery status, recommended actions, and recovery workflow management.
 
 ### Analytics
 
-The analytics dashboard provides visibility into:
-
-* Total recovery opportunities
-* Total revenue at risk
-* Recovered revenue
-* Active recovery value
-* Unrecoverable value
-* Recovery rate
-* Recovery status breakdown
-* Priority breakdown
-* Recovery channel breakdown
-* Failure reason breakdown
+Provides recovery and revenue performance insights.
 
 ### Notifications
 
-The application provides a notification center based on payment and recovery activity, including recovery-related events and important operational signals.
+Provides a centralized area for application notifications.
 
-### Account Management
+### Account
 
-The account section supports management of:
-
-* Personal information
-* Business information
-* Contact details
-* Account preferences
+Provides account-related information.
 
 ### Settings
 
-Configurable recovery settings include:
-
-* Automated recovery
-* Maximum recovery attempts
-* Recovery channels
-* Message language
-* Notifications
-* Compliance controls
-* Approval requirements
-* Recovery preferences
+Provides application configuration and preferences.
 
 ---
 
-## Technology Stack
+# 🏗️ System Architecture
 
-### Frontend
+```text
+                     ┌───────────────────────┐
+                     │       Customer        │
+                     │    Failed Payment     │
+                     └───────────┬───────────┘
+                                 │
+                                 ▼
+                     ┌───────────────────────┐
+                     │   PayRecover AI       │
+                     │   Recovery Engine     │
+                     └───────────┬───────────┘
+                                 │
+                    ┌────────────┼────────────┐
+                    │            │            │
+                    ▼            ▼            ▼
+              Failure       AI Recovery    Compliance
+              Analysis      Intelligence    Rules
+                    │            │            │
+                    └────────────┼────────────┘
+                                 │
+                                 ▼
+                     ┌───────────────────────┐
+                     │   Recovery Workflow   │
+                     └───────────┬───────────┘
+                                 │
+                ┌────────────────┼────────────────┐
+                │                │                │
+                ▼                ▼                ▼
+             Retry          Email Recovery    Stop /
+             Payment         Communication    Unrecoverable
+                │                │                │
+                └────────────────┼────────────────┘
+                                 │
+                                 ▼
+                     ┌───────────────────────┐
+                     │ Recovery Analytics    │
+                     │ & Audit Trail         │
+                     └───────────────────────┘
+```
+
+---
+
+# 🧩 Technology Stack
+
+## Frontend
 
 * React
 * Vite
@@ -247,144 +343,58 @@ Configurable recovery settings include:
 * Axios
 * Lucide React
 * Recharts
-* CSS
+* Modern responsive CSS
 
-### Backend
+## Backend
 
 * Node.js
 * Express.js
-* MongoDB
-* Mongoose
 * REST APIs
 
-### Payments
+## Database
 
-* Razorpay integration
+* MongoDB Atlas
+* Mongoose
 
-### Communication
+## Payments
+
+* Razorpay
+
+## Communication
 
 * Gmail SMTP
-* Nodemailer
-* Recovery email workflow
 
-### Intelligence
+## Deployment
 
-* AI-assisted recovery engine
-* Failure analysis
-* Recovery prioritization
-* Recovery recommendations
-* Recovery probability
-* Compliance-aware recovery decisions
+* Vercel — Frontend
+* Render — Backend
+* MongoDB Atlas — Database
 
 ---
 
-## System Architecture
-
-```text
-                         ┌─────────────────────────┐
-                         │      PayRecover AI       │
-                         │     React Frontend       │
-                         └────────────┬────────────┘
-                                      │
-                                  REST API
-                                      │
-                                      ▼
-                         ┌─────────────────────────┐
-                         │     Node.js / Express    │
-                         │      Backend API         │
-                         └────────────┬────────────┘
-                                      │
-                 ┌────────────────────┼────────────────────┐
-                 │                    │                    │
-                 ▼                    ▼                    ▼
-        ┌────────────────┐   ┌─────────────────┐   ┌────────────────┐
-        │    MongoDB     │   │ Recovery Engine │   │ Razorpay       │
-        │                │   │                 │   │ Integration    │
-        │ Payments       │   │ Failure Analysis│   │                │
-        │ Recoveries     │   │ Risk Scoring    │   │ Payments       │
-        │ Audit Data     │   │ Recovery Rules  │   │ Orders         │
-        └────────────────┘   └────────┬────────┘   └────────────────┘
-                                      │
-                                      ▼
-                           ┌─────────────────────┐
-                           │ AI Recovery Services│
-                           │                     │
-                           │ Recommendations     │
-                           │ Message Generation  │
-                           │ Recovery Decisions  │
-                           └──────────┬──────────┘
-                                      │
-                                      ▼
-                           ┌─────────────────────┐
-                           │ Communication Layer │
-                           │                     │
-                           │ Email / Recovery    │
-                           │ Actions / Tracking  │
-                           └─────────────────────┘
-```
-
----
-
-## Application Pages
-
-The PayRecover AI frontend contains the following major application areas:
-
-```text
-Dashboard
-│
-├── Payments
-│   └── Payment Details
-│
-├── Recoveries
-│   ├── Recovery Queue
-│   ├── Recovery Decision Center
-│   ├── Recovery Message Center
-│   └── Recovery Operations
-│
-├── Analytics
-│
-├── Notifications
-│
-├── Account
-│
-└── Settings
-```
-
-Additional recovery and checkout interfaces are included as part of the project architecture.
-
----
-
-## Project Structure
+# 📁 Project Structure
 
 ```text
 payrecover-ai/
 │
 ├── frontend/
-│   ├── public/
 │   ├── src/
 │   │   ├── components/
-│   │   ├── context/
 │   │   ├── pages/
 │   │   ├── services/
-│   │   ├── Styles/
 │   │   ├── App.jsx
 │   │   ├── main.jsx
-│   │   ├── index.css
-│   │   └── styles.css
-│   ├── index.html
+│   │   └── index.css
+│   │
+│   ├── public/
 │   ├── package.json
-│   └── vite.config.js
+│   └── vercel.json
 │
 ├── backend/
-│   ├── config/
-│   ├── controllers/
-│   ├── middleware/
 │   ├── models/
 │   ├── routes/
-│   ├── scripts/
 │   ├── services/
-│   ├── utils/
-│   ├── SeedDemoData.js
+│   ├── controllers/
 │   ├── server.js
 │   └── package.json
 │
@@ -394,15 +404,9 @@ payrecover-ai/
 
 ---
 
-## Backend API
+# 🔌 Backend API Structure
 
-The application currently uses the following core API routes.
-
-### Health
-
-```text
-GET /api/health
-```
+The backend exposes REST APIs for the frontend.
 
 ### Payments
 
@@ -410,7 +414,7 @@ GET /api/health
 GET  /api/payments
 GET  /api/payments/stats
 GET  /api/payments/recent
-GET  /api/payments/:id
+GET  /api/payments/status/:paymentId
 POST /api/payments/create-order
 POST /api/payments/verify
 ```
@@ -419,147 +423,146 @@ POST /api/payments/verify
 
 ```text
 GET  /api/recovery
+GET  /api/recovery/:id
 GET  /api/recovery/queue
 GET  /api/recovery/analytics
-GET  /api/recovery/:id
 
 POST /api/recovery/create
 POST /api/recovery/send
+
 POST /api/recovery/:id/recovered
 POST /api/recovery/:id/unrecoverable
 ```
 
-The frontend is designed to use the existing backend routes rather than relying on fictional API endpoints.
+### Health
+
+```text
+GET /api/health
+GET /api/db-status
+```
 
 ---
 
-## Database
+# 🗃️ Core Data Models
 
-PayRecover AI uses MongoDB with Mongoose for persistence.
+## Payment
 
-Core data includes:
+Payment records contain information including:
 
-* Payments
-* Recoveries
-* Users
-* Settings
-* Notifications
-* Recovery rules
-* Recovery audit events
-* Revenue events
-* Revenue opportunities
-* Checkout sessions
+```text
+razorpayPaymentId
+razorpayOrderId
+amount
+currency
+customerName
+customerEmail
+customerPhone
+paymentStatus
+failureReason
+failureCode
+paymentMethod
+retryCount
+recoveryStatus
+recoveryPriority
+aiRecommendation
+createdAt
+updatedAt
+```
 
-Recovery records maintain operational information such as:
+## Recovery
 
-* Recovery status
-* Priority
-* AI score
-* Recovery probability
-* Recommended action
-* Attempt count
-* Maximum attempts
-* Recovery channel
-* Customer communication
-* Recovered amount
-* Recovery timestamps
-* Stopping reason
-* Audit information
+Recovery records contain information including:
+
+```text
+paymentId
+customerEmail
+customerName
+reason
+status
+recoveryMessage
+paymentLink
+attempts
+lastAttemptAt
+amount
+currency
+recoveryType
+aiScore
+recoveryProbability
+recommendedAction
+priority
+currentStep
+maxAttempts
+attemptCount
+nextActionAt
+lastActionAt
+recoveredAmount
+recoveredAt
+recoveryChannel
+promiseToPay
+stoppingReason
+escalationLevel
+contactAllowed
+messageLanguage
+generatedMessage
+campaignId
+metadata
+auditTrail
+```
 
 ---
 
-## Environment Variables
+# 🔐 Environment Variables
 
-Sensitive configuration must be stored in environment variables.
+Create environment files locally and **never commit real credentials**.
 
-**Never commit real credentials, API keys, passwords, or secrets to GitHub.**
-
-### Backend
-
-Create:
-
-```text
-backend/.env
-```
-
-Example:
-
-```env
-PORT=3001
-
-MONGO_URI=your_mongodb_connection_string
-
-RAZORPAY_KEY_ID=your_razorpay_key_id
-RAZORPAY_KEY_SECRET=your_razorpay_secret
-
-SMTP_HOST=your_smtp_host
-SMTP_PORT=587
-SMTP_USER=your_email
-SMTP_PASSWORD=your_email_password
-SMTP_FROM=your_sender_email
-
-JWT_SECRET=your_jwt_secret
-```
-
-Use the exact variable names expected by the backend configuration.
-
-### Frontend
-
-If required, create:
-
-```text
-frontend/.env
-```
-
-Example:
+## Frontend
 
 ```env
 VITE_API_URL=http://localhost:3001/api
 ```
 
-The frontend also defaults to the local backend API when the environment variable is not provided.
+For production:
+
+```env
+VITE_API_URL=https://payrecover-ai-backend.onrender.com/api
+```
+
+## Backend
+
+The backend requires environment variables for configuration, including the MongoDB connection and external service credentials.
+
+Example:
+
+```env
+PORT=3001
+MONGO_URI=your_mongodb_connection_string
+```
+
+Additional payment and email configuration should be supplied through environment variables.
+
+**Never commit API keys, passwords, SMTP credentials, database credentials, or other secrets to GitHub.**
 
 ---
 
-## Installation
+# ▶️ Running the Project Locally
 
-### Prerequisites
-
-Install:
-
-* Node.js
-* npm
-* Git
-* MongoDB Atlas account or MongoDB
-* Razorpay account for payment integration
-
-### Clone the repository
+## 1. Clone the repository
 
 ```bash
 git clone https://github.com/vaishnavisrinath8-bit/payrecover-ai.git
-```
-
-```bash
 cd payrecover-ai
 ```
 
 ---
 
-## Run the Backend
-
-Open a terminal:
+## 2. Install backend dependencies
 
 ```bash
 cd backend
-```
-
-Install dependencies:
-
-```bash
 npm install
 ```
 
-Start the backend:
+Configure the backend environment variables and start the server:
 
 ```bash
 npm start
@@ -573,188 +576,213 @@ http://localhost:3001
 
 ---
 
-## Run the Frontend
+## 3. Install frontend dependencies
 
-Open a second terminal:
+Open another terminal:
 
 ```bash
 cd frontend
-```
-
-Install dependencies:
-
-```bash
 npm install
 ```
 
-Start the Vite development server:
+Configure:
+
+```env
+VITE_API_URL=http://localhost:3001/api
+```
+
+Start the frontend:
 
 ```bash
 npm run dev
 ```
 
-Open:
+The frontend will be available through the Vite development server.
+
+---
+
+# 🌐 Production Deployment
+
+The current architecture uses:
 
 ```text
-http://localhost:5173
+Vercel
+   │
+   │ HTTPS API requests
+   ▼
+Render
+   │
+   │ Mongoose
+   ▼
+MongoDB Atlas
 ```
 
----
+### Frontend
 
-## Demo Data
+Deployed using Vercel.
 
-The project includes a demo-data seeding system for development and presentation.
+### Backend
 
-The seeded dataset contains realistic payment and recovery scenarios including:
+Deployed using Render.
 
-* Successful payments
-* Failed payments
-* Card declines
-* Bank declines
-* Authentication failures
-* Insufficient funds
-* Network failures
-* Timeouts
-* Expired cards
-* Invalid payment details
-* Different payment methods
-* Recovery opportunities
-* Recovery priorities
-* Recovery statuses
+### Database
 
-This allows the dashboard and analytics views to demonstrate the complete recovery lifecycle without requiring production payment traffic.
+Hosted using MongoDB Atlas.
 
 ---
 
-## Security & Safety Principles
+# 🔗 Live Demo
 
-PayRecover AI is designed around bounded recovery automation.
+### Frontend
 
-The system should not blindly contact customers or repeatedly attempt recovery actions.
+https://payrecover-ai-black.vercel.app
 
-Recovery decisions are constrained by:
+### Backend
+
+https://payrecover-ai-backend.onrender.com
+
+The frontend communicates with the production backend through the configured API URL.
+
+---
+
+# 🏆 Razorpay Buildathon Alignment
+
+PayRecover AI is designed around the **AI Revenue Recovery** problem.
+
+The project addresses the key stages of revenue recovery:
+
+| Revenue Recovery Requirement      | PayRecover AI                 |
+| --------------------------------- | ----------------------------- |
+| Detect revenue at risk            | Failed payment monitoring     |
+| Diagnose payment failures         | Failure reason/code analysis  |
+| Prioritize recovery opportunities | Recovery priority             |
+| Determine intervention            | AI recovery recommendation    |
+| Execute recovery workflow         | Recovery creation and actions |
+| Communicate with customers        | Recovery email workflow       |
+| Track recovery                    | Recovery status and attempts  |
+| Measure recovered money           | Recovery analytics            |
+| Apply bounded workflows           | Compliance and recovery rules |
+| Maintain transparency             | Audit trail                   |
+
+---
+
+# 🔄 Example Recovery Scenario
+
+Consider a customer whose payment fails.
+
+### Step 1 — Payment Failure
+
+The payment is recorded with its failure reason and payment information.
+
+### Step 2 — Risk Evaluation
+
+The recovery engine evaluates the payment and determines whether recovery should be attempted.
+
+### Step 3 — Recovery Recommendation
+
+The system generates an appropriate recovery recommendation and priority.
+
+### Step 4 — Recovery Case
+
+A recovery record is created and linked to the payment.
+
+### Step 5 — Customer Communication
+
+A recovery message can be generated and sent through the configured email workflow.
+
+### Step 6 — Recovery Attempt
+
+The customer can retry the payment.
+
+### Step 7 — Outcome
+
+The recovery can ultimately be marked as:
 
 ```text
-Recovery Eligibility
-        ↓
-Contact Permission
-        ↓
-Attempt Limits
-        ↓
-Expiry Rules
-        ↓
-Approval Requirements
-        ↓
-Allowed Action
-        ↓
-Audit Event
+Recovered
 ```
 
-This approach makes the recovery workflow more suitable for real-world business operations.
-
----
-
-## Buildathon Alignment
-
-PayRecover AI is designed for the **AI Revenue Recovery** problem space.
-
-The platform demonstrates:
-
-| Requirement                       | PayRecover AI |
-| --------------------------------- | ------------- |
-| Detect revenue at risk            | ✓             |
-| Diagnose payment failure          | ✓             |
-| Prioritize recovery opportunities | ✓             |
-| Recommend recovery action         | ✓             |
-| Apply safety/compliance controls  | ✓             |
-| Generate recovery communication   | ✓             |
-| Execute recovery workflow         | ✓             |
-| Track recovery outcome            | ✓             |
-| Measure recovered revenue         | ✓             |
-| Recovery analytics                | ✓             |
-| Recovery operations               | ✓             |
-| Audit trail                       | ✓             |
-
----
-
-## Screenshots
-
-Screenshots of the actual application can be added here.
-
-Recommended screenshots:
+or
 
 ```text
-screenshots/
-├── dashboard.png
-├── payments.png
-├── payment-details.png
-├── recoveries.png
-├── recovery-decision-center.png
-├── recovery-message-center.png
-├── analytics.png
-├── notifications.png
-├── account.png
-└── settings.png
+Unrecoverable / Stopped
 ```
 
-Only screenshots from the actual working application should be included.
+### Step 8 — Measurement
+
+The recovery outcome contributes to recovery analytics and revenue measurement.
 
 ---
 
-## Project Status
+# 🧠 Why PayRecover AI?
 
-PayRecover AI is a working full-stack application demonstrating an intelligent payment recovery workflow.
+Traditional payment dashboards primarily answer:
 
-The current implementation includes:
+> "Which payments failed?"
 
-* Payment monitoring
-* Failed payment analysis
-* Recovery prioritization
-* AI-assisted recovery recommendations
-* Recovery command center
-* Recovery queue
-* Recovery message generation
-* Compliance and safety controls
-* Recovery workflow orchestration
-* Recovery actions
-* Recovery outcome tracking
-* Recovered revenue measurement
-* Analytics
-* Notifications
-* Account management
-* Settings and preferences
-* Audit-oriented recovery tracking
-* Razorpay integration
-* MongoDB persistence
-* Email recovery workflow
+PayRecover AI aims to answer a more valuable set of questions:
 
-The project is intended as an **internship portfolio and Razorpay Buildathon demonstration project**.
+> "Why did it fail?"
+
+> "Is it worth recovering?"
+
+> "What should we do next?"
+
+> "How should we communicate with the customer?"
+
+> "Did we recover the revenue?"
+
+This transforms payment failure monitoring into an **action-oriented revenue recovery system**.
 
 ---
 
-## Future Enhancements
+# 🔮 Future Enhancements
 
 Potential future improvements include:
 
-* Production-grade ML recovery prediction
-* Advanced customer-level behavioral models
-* Additional payment providers
-* More sophisticated recovery strategy optimization
-* Automated retry scheduling
-* Advanced revenue forecasting
-* Multi-tenant SaaS architecture
+* More advanced ML-based recovery probability prediction
+* Customer-level behavioral models
+* Multi-channel recovery communication
+* WhatsApp/SMS recovery workflows
+* Intelligent payment-method recommendations
+* Adaptive retry scheduling
+* Automated recovery campaigns
+* A/B testing of recovery messages
+* More advanced revenue forecasting
 * Role-based access control
+* Multi-tenant SaaS architecture
+* Advanced fraud/risk signals
 * Real-time event processing
-* Advanced experimentation and A/B testing
-* Production-grade observability
-* More communication channels
-
-These are future enhancements and are not represented as currently implemented functionality.
+* Production-grade observability and monitoring
 
 ---
 
-## Author
+# 👨‍💻 Project Purpose
 
-**PayRecover AI**
+PayRecover AI was developed as a practical demonstration of how AI, payment infrastructure, backend services, databases, and modern frontend technologies can be combined to solve a real-world revenue problem.
 
-Built as a full-stack AI-powered payment recovery platform for internship and buildathon demonstration.
+The project focuses on moving beyond payment-status monitoring toward:
+
+**Detection → Diagnosis → Decision → Action → Recovery → Measurement**
+
+---
+
+# 📌 Project Status
+
+**Status: Production Demo Ready**
+
+Current deployment:
+
+```text
+Frontend  → Vercel
+Backend   → Render
+Database  → MongoDB Atlas
+Payments  → Razorpay
+Email     → Gmail SMTP
+```
+
+---
+
+## Built with React, Node.js, MongoDB, Razorpay and AI-powered recovery logic.
+
+**PayRecover AI — Turning failed payments into recoverable revenue.**

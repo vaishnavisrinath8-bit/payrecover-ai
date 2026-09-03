@@ -1,4 +1,3 @@
-
 // ============================================================
 // PAYRECOVER AI - BACKEND SERVER
 // ============================================================
@@ -72,21 +71,44 @@ PORT=3001
 // CORS
 // ============================================================
 
+// Frontend origins allowed to access the backend.
+//
+// Local development:
+//   http://localhost:5173
+//   http://127.0.0.1:5173
+//
+// Production:
+//   https://payrecover-ai-black.vercel.app
+//
+// Vercel preview:
+//   https://payrecover-azzn8a43f-pay-recover-ai.vercel.app
+
 const allowedOrigins = [
   "http://localhost:5173",
   "http://127.0.0.1:5173",
+
+  // Production Vercel frontend
+  "https://payrecover-ai-black.vercel.app",
+
+  // Vercel preview deployment
+  "https://payrecover-azzn8a43f-pay-recover-ai.vercel.app",
 ];
 
 app.use(
   cors({
     origin: function (origin, callback) {
       // Allow requests without an Origin header
-      // such as Postman or direct backend requests.
+      // such as Postman, server-to-server requests,
+      // and direct browser navigation to the API.
       if (!origin) {
         return callback(null, true);
       }
 
       if (allowedOrigins.includes(origin)) {
+        console.log(
+          `CORS allowed: ${origin}`
+        );
+
         return callback(null, true);
       }
 
@@ -271,6 +293,7 @@ app.use((req, res) => {
     message: "API endpoint not found.",
     method: req.method,
     path: req.originalUrl,
+
     availableEndpoints: {
       health:
         "/api/health",
@@ -450,6 +473,9 @@ http://localhost:${PORT}
 
 Frontend:
 http://localhost:5173
+
+Production Frontend:
+https://payrecover-ai-black.vercel.app
 
 API:
 http://localhost:${PORT}/api
@@ -722,4 +748,3 @@ process.on(
 // ============================================================
 
 startServer();
-
